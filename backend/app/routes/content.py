@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.core.database import get_db
-from app.models.models import ContentItem
+from app.models.models import ContentItem, ContentMetadata
 from app.schemas.schemas import ContentResponse
 from app.routes.auth import get_current_user
 
@@ -20,7 +21,11 @@ async def list_content(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(ContentItem).where(ContentItem.org_id == org_id)
+    query = (
+        select(ContentItem)
+        .options(selectinload(ContentItem.metadata_record))
+        .where(ContentItem.org_id == org_id)
+    )
 
     if service_id:
         query = query.where(ContentItem.service_instance_id == service_id)
@@ -31,4 +36,31 @@ async def list_content(
 
     query = query.order_by(ContentItem.ingested_at.desc()).offset(offset).limit(limit)
     result = await db.execute(query)
-    return result.scalars().all()
+    items = result.scalars().unique().all()
+
+    response_items = []
+    for item in items:
+        item_dict = {
+            "id": item.id,
+            "service_instance_id": item.service_instance_id,
+            "external_id": item.external_id,
+            "content_type": item.content_type,
+            "category": item.category,
+            "payload": item.payload,
+            "ingested_at": item.ingested_at,
+            "metadata": None,
+        }
+        if item.metadata_record:
+            item_dict["metadata"] = {
+                "sentiment": item.metadata_record.sentiment,
+                "sentiment_score": item.metadata_record.sentiment_score,
+                "spam_score": item.metadata_record.spam_score,
+                "toxicity_score": item.metadata_record.toxicity_score,
+                "auto_tags": item.metadata_record.auto_tags,
+                "language": item.metadata_record.language,
+                "flagged": item.metadata_record.flagged,
+                "flag_reasons": item.metadata_record.flag_reasons,
+            }
+        response_items.append(item_dict)
+
+    return response_items

@@ -87,6 +87,20 @@ class ServiceResponse(BaseModel):
 
 
 # Content
+class ContentMetadataResponse(BaseModel):
+    sentiment: Optional[str] = None
+    sentiment_score: Optional[float] = None
+    spam_score: Optional[float] = None
+    toxicity_score: Optional[float] = None
+    auto_tags: Optional[list] = None
+    language: Optional[str] = None
+    flagged: bool = False
+    flag_reasons: Optional[list] = None
+
+    class Config:
+        from_attributes = True
+
+
 class ContentResponse(BaseModel):
     id: UUID
     service_instance_id: UUID
@@ -95,6 +109,7 @@ class ContentResponse(BaseModel):
     category: str
     payload: dict
     ingested_at: datetime
+    metadata: Optional[ContentMetadataResponse] = None
 
     class Config:
         from_attributes = True
