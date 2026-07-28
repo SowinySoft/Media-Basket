@@ -36,10 +36,9 @@ podman-compose -f podman-compose.yml up
 
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
+uv venv --python 3.12
+uv pip install -r requirements.txt
+cp .env.example .env  # Windows: copy .env.example .env
 uvicorn app.main:app --reload
 ```
 
