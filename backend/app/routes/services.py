@@ -5,7 +5,8 @@ from app.core.database import get_db
 from app.models.models import ServiceInstance, Organization, Member
 from app.schemas.schemas import ServiceCreate, ServiceResponse
 from app.routes.auth import get_current_user
-from app.tasks import sync_service
+from app.tasks import sync_service_safe
+from app.celery_app import celery_app
 
 router = APIRouter()
 
@@ -71,8 +72,8 @@ async def trigger_sync(
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
 
-    sync_service.delay(str(service_id), str(org_id))
-    return {"status": "sync_queued", "service_id": str(service_id)}
+    sync_service_safe(str(service_id), str(org_id))
+    return {"status": "sync_queued", "service_id": str(service_id), "celery_available": celery_app is not None}
 
 
 @router.delete("/{service_id}", status_code=204)

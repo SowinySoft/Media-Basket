@@ -8,6 +8,7 @@ from app.core.database import AsyncSessionLocal
 from app.core.vault import read_secret
 from app.models.models import ServiceInstance, ContentItem, ContentMetadata
 from app.connectors.registry import get_connector
+from app.celery_app import celery_app
 
 
 def compute_hash(data: dict) -> str:
@@ -26,6 +27,14 @@ def run_async(coro):
 @shared_task(name="tasks.sync_service", bind=True, max_retries=3)
 def sync_service(self, service_id: str, org_id: str):
     return run_async(_sync_service(service_id, org_id))
+
+
+def sync_service_safe(service_id: str, org_id: str):
+    """Queue sync if Celery is available, otherwise run inline."""
+    if celery_app:
+        sync_service.delay(service_id, org_id)
+    else:
+        run_async(_sync_service(service_id, org_id))
 
 
 async def _sync_service(service_id: str, org_id: str):

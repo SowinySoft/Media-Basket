@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     DATABASE_URL_SYNC: str = "postgresql://postgres:postgres@localhost:5432/media_basket"
 
     # Redis
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str | None = "redis://localhost:6379/0"
 
     # JWT
     JWT_SECRET_KEY: str = "dev-secret-change-in-production"
