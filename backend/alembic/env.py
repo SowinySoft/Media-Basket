@@ -25,8 +25,11 @@ def do_run_migrations(connection):
 
 
 async def run_async_migrations() -> None:
+    from app.models import __all__
     from app.core.database import Base
-    target_metadata = Base.metadata
+    import app.models.models
+
+    metadata = Base.metadata
 
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
@@ -35,8 +38,14 @@ async def run_async_migrations() -> None:
     )
 
     async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
+        await connection.run_sync(do_run_migrations_sync, metadata)
     await connectable.dispose()
+
+
+def do_run_migrations_sync(connection, metadata):
+    context.configure(connection=connection, target_metadata=metadata)
+    with context.begin_transaction():
+        context.run_migrations()
 
 
 def run_migrations_online() -> None:

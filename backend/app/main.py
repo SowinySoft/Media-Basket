@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import get_settings
 from app.routes import auth, services, content, moderation, billing, health, oauth, websocket
+from app.middleware.tenant import TenantMiddleware
 
 settings = get_settings()
 
@@ -19,6 +20,8 @@ app = FastAPI(
     version=settings.APP_VERSION,
     lifespan=lifespan,
 )
+
+app.add_middleware(TenantMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

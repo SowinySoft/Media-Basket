@@ -61,6 +61,10 @@ export const api = {
       request<void>(`/orgs/${orgId}/services/${serviceId}`, {
         method: "DELETE",
       }),
+    sync: (orgId: string, serviceId: string) =>
+      request<{ status: string; service_id: string }>(`/orgs/${orgId}/services/${serviceId}/sync`, {
+        method: "POST",
+      }),
     getAuthUrl: (connectorType: string, serviceId: string) =>
       request<{ auth_url: string }>(`/services/auth/${connectorType}?service_id=${serviceId}`),
   },

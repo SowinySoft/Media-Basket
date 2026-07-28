@@ -5,6 +5,7 @@ from app.core.database import get_db
 from app.models.models import ServiceInstance, Organization, Member
 from app.schemas.schemas import ServiceCreate, ServiceResponse
 from app.routes.auth import get_current_user
+from app.tasks import sync_service
 
 router = APIRouter()
 
@@ -48,6 +49,30 @@ async def create_service(
     await db.flush()
     await db.refresh(service)
     return service
+
+
+@router.post("/{service_id}/sync")
+async def trigger_sync(
+    org_id: str,
+    service_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user["org_id"] != org_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    result = await db.execute(
+        select(ServiceInstance).where(
+            ServiceInstance.id == service_id,
+            ServiceInstance.org_id == org_id,
+        )
+    )
+    service = result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    sync_service.delay(str(service_id), str(org_id))
+    return {"status": "sync_queued", "service_id": str(service_id)}
 
 
 @router.delete("/{service_id}", status_code=204)

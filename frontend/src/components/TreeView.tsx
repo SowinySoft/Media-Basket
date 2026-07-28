@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { Tree } from "react-arborist";
 import { useStore } from "@/lib/store";
-import { FileText, MessageSquare, Video, MessageCircle, ChevronRight, ExternalLink } from "lucide-react";
+import { FileText, MessageSquare, Video, MessageCircle, ChevronRight, RefreshCw } from "lucide-react";
 
 interface TreeNode {
   id: string;
@@ -30,6 +30,8 @@ const contentIcons: Record<string, any> = {
 };
 
 function NodeRenderer({ node, style, dragHandle }: any) {
+  const { syncService } = useStore();
+  const [syncing, setSyncing] = useState(false);
   const isService = node.data.type === "service";
   const Icon = isService ? null : contentIcons[node.data.contentType] || FileText;
   const sentiment = node.data.data?.metadata?.sentiment;
@@ -40,6 +42,13 @@ function NodeRenderer({ node, style, dragHandle }: any) {
       : sentiment === "negative"
       ? "text-red-500"
       : "text-gray-500";
+
+  const handleSync = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSyncing(true);
+    await syncService(node.data.id || node.id);
+    setSyncing(false);
+  };
 
   return (
     <div
@@ -54,9 +63,19 @@ function NodeRenderer({ node, style, dragHandle }: any) {
       )}
       <span className="flex-1 truncate text-sm">{node.data.name}</span>
       {isService && (
-        <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100">
-          {connectorIcons[node.data.connectorType] || node.data.connectorType}
-        </span>
+        <>
+          <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100">
+            {connectorIcons[node.data.connectorType] || node.data.connectorType}
+          </span>
+          <button
+            onClick={handleSync}
+            className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+            title="Sync"
+            disabled={syncing}
+          >
+            <RefreshCw className={`w-3 h-3 ${syncing ? "animate-spin" : ""}`} />
+          </button>
+        </>
       )}
       {!isService && node.data.data?.metadata?.flagged && (
         <span className="w-2 h-2 rounded-full bg-red-500" />

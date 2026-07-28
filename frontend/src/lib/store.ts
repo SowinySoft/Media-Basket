@@ -64,6 +64,7 @@ interface TreeState {
   fetchServices: () => Promise<void>;
   fetchContent: (serviceId?: string) => Promise<void>;
   createService: (connectorType: string, displayName: string) => Promise<void>;
+  syncService: (serviceId: string) => Promise<any>;
   deleteService: (serviceId: string) => Promise<void>;
   moderateContent: (contentId: string, action: string, details?: any) => Promise<void>;
   setSelectedService: (serviceId: string | null) => void;
@@ -220,6 +221,23 @@ export const useStore = create<TreeState>((set, get) => ({
       });
       if (!res.ok) throw new Error("Failed to create service");
       await get().fetchServices();
+    } catch (err: any) {
+      set({ error: err.message });
+    }
+  },
+
+  syncService: async (serviceId) => {
+    const token = localStorage.getItem("access_token");
+    const orgId = get().org?.id;
+    if (!token || !orgId) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/orgs/${orgId}/services/${serviceId}/sync`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to sync service");
+      return await res.json();
     } catch (err: any) {
       set({ error: err.message });
     }
