@@ -4,9 +4,19 @@ All your media accounts in one basket.
 
 ## Quick Start
 
+### With Docker
+
 ```bash
 docker compose up
 ```
+
+### With Podman
+
+```bash
+podman-compose -f podman-compose.yml up
+```
+
+### Ports
 
 - Frontend: http://localhost:3000
 - API: http://localhost:3001
@@ -22,17 +32,35 @@ docker compose up
 
 ## Development
 
-```bash
-# Backend
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+### Backend (Python 3.12+)
 
-# Frontend
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env
+uvicorn app.main:app --reload
+```
+
+### Frontend (Node 20+)
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
+
+## Sandbox Environment
+
+If running in a sandbox (e.g. Dev Containers, Gitpod, Codespaces):
+
+1. Services bind to `0.0.0.0` by default
+2. Use the forwarded ports from your IDE
+3. Update `CORS_ORIGINS` in `.env` if needed:
+   ```
+   CORS_ORIGINS=["http://localhost:3000","https://your-sandbox-url"]
+   ```
 
 ## Architecture
 
