@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store";
 import TreeView from "@/components/TreeView";
 import ContentDetail from "@/components/ContentDetail";
@@ -10,6 +10,7 @@ import { Search, Plus, RefreshCw, LogOut } from "lucide-react";
 
 export default function TreePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     user,
     services,
@@ -18,6 +19,7 @@ export default function TreePage() {
     selectedContentId,
     fetchUser,
     fetchServices,
+    syncService,
     logout,
   } = useStore();
 
@@ -39,6 +41,17 @@ export default function TreePage() {
 
     init();
   }, []);
+
+  useEffect(() => {
+    const connected = searchParams.get("connected");
+    if (connected && services.length > 0) {
+      const service = services.find((s) => s.connector_type === connected);
+      if (service) {
+        syncService(service.id);
+        router.replace("/tree");
+      }
+    }
+  }, [searchParams, services]);
 
   useEffect(() => {
     if (user) {
