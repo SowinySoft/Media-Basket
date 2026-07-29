@@ -54,36 +54,66 @@ async def _sync_service(service_id: str, org_id: str):
         if not credentials:
             return {"error": "No credentials found"}
 
+        if credentials.get("refresh_token"):
+            try:
+                new_tokens = await connector.refresh_token(credentials["refresh_token"])
+                if "access_token" in new_tokens:
+                    credentials = {**credentials, **new_tokens}
+                    store_secret(org_id, service_id, credentials)
+            except Exception:
+                pass
+
         access_token = credentials.get("access_token")
         items_fetched = 0
 
-        fetch_types = {
-            "youtube": ["videos"],
-            "reddit": ["posts", "comments"],
-            "whatsapp": ["conversations"],
-        }
-
-        for fetch_type in fetch_types.get(service.connector_type, []):
-            items = await connector.fetch({"access_token": access_token, "type": fetch_type})
-            for item in items:
-                content_hash = compute_hash(item["payload"])
-                existing = await db.execute(
-                    select(ContentItem).where(ContentItem.content_hash == content_hash)
-                )
-                if existing.scalar_one_or_none():
-                    continue
-
-                content = ContentItem(
-                    org_id=org_id,
-                    service_instance_id=service_id,
-                    external_id=item["external_id"],
-                    content_type=item["content_type"],
-                    category=item["category"],
-                    payload=item["payload"],
-                    content_hash=content_hash,
-                )
-                db.add(content)
-                items_fetched += 1
+        if service.connector_type == "youtube":
+            channel_items = await connector.fetch({"access_token": access_token, "type": "channel"})
+            channel_id = channel_items[0]["external_id"] if channel_items else None
+            if channel_id:
+                items = await connector.fetch({"access_token": access_token, "type": "videos", "channel_id": channel_id})
+                for item in items:
+                    content_hash = compute_hash(item["payload"])
+                    existing = await db.execute(
+                        select(ContentItem).where(ContentItem.content_hash == content_hash)
+                    )
+                    if existing.scalar_one_or_none():
+                        continue
+                    content = ContentItem(
+                        org_id=org_id,
+                        service_instance_id=service_id,
+                        external_id=item["external_id"],
+                        content_type=item["content_type"],
+                        category=item["category"],
+                        payload=item["payload"],
+                        content_hash=content_hash,
+                    )
+                    db.add(content)
+                    items_fetched += 1
+        else:
+            fetch_types = {
+                "reddit": ["posts", "comments"],
+                "whatsapp": ["conversations"],
+            }
+            for fetch_type in fetch_types.get(service.connector_type, []):
+                items = await connector.fetch({"access_token": access_token, "type": fetch_type})
+                for item in items:
+                    content_hash = compute_hash(item["payload"])
+                    existing = await db.execute(
+                        select(ContentItem).where(ContentItem.content_hash == content_hash)
+                    )
+                    if existing.scalar_one_or_none():
+                        continue
+                    content = ContentItem(
+                        org_id=org_id,
+                        service_instance_id=service_id,
+                        external_id=item["external_id"],
+                        content_type=item["content_type"],
+                        category=item["category"],
+                        payload=item["payload"],
+                        content_hash=content_hash,
+                    )
+                    db.add(content)
+                    items_fetched += 1
 
         from datetime import datetime, timezone
         service.last_synced_at = datetime.now(timezone.utc)
