@@ -1,8 +1,8 @@
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import pool, text
+from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 import asyncio
-from sqlalchemy.ext.asyncio import async_engine_from_config
 
 config = context.config
 if config.config_file_name is not None:
@@ -18,34 +18,29 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def do_run_migrations(connection):
-    context.configure(connection=connection, target_metadata=target_metadata)
+def do_run_migrations(connection, metadata):
+    context.configure(connection=connection, target_metadata=metadata)
     with context.begin_transaction():
         context.run_migrations()
 
 
 async def run_async_migrations() -> None:
-    from app.models import __all__
-    from app.core.database import Base
     import app.models.models
+    from app.core.database import Base
+    from app.core.config import get_settings
 
-    metadata = Base.metadata
+    settings = get_settings()
+    database_url = settings.DATABASE_URL_SYNC.replace("postgresql://", "postgresql+asyncpg://")
 
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        {"sqlalchemy.url": database_url},
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
     async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations_sync, metadata)
+        await connection.run_sync(do_run_migrations, Base.metadata)
     await connectable.dispose()
-
-
-def do_run_migrations_sync(connection, metadata):
-    context.configure(connection=connection, target_metadata=metadata)
-    with context.begin_transaction():
-        context.run_migrations()
 
 
 def run_migrations_online() -> None:
