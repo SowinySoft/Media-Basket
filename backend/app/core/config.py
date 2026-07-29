@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     WHATSAPP_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/whatsapp"
     WHATSAPP_VERIFY_TOKEN: str = "media-basket-verify"
     WHATSAPP_PHONE_NUMBER_ID: str = ""
+    WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
 
     # SaaS
     DEFAULT_ORG_NAME: str = "My Organization"
