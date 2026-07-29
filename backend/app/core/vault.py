@@ -1,54 +1,53 @@
-import hvac
+import json
+import os
 from app.core.config import get_settings
 
 settings = get_settings()
 
-client = hvac.Client(url=settings.VAULT_URL, token=settings.VAULT_TOKEN)
+SECRETS_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "secrets.json")
+
+_secrets_store: dict[str, dict] = {}
 
 
-def get_vault_client() -> hvac.Client:
-    return client
+def _load_file():
+    global _secrets_store
+    if os.path.exists(SECRETS_FILE):
+        with open(SECRETS_FILE, "r") as f:
+            _secrets_store = json.load(f)
+
+
+def _save_file():
+    with open(SECRETS_FILE, "w") as f:
+        json.dump(_secrets_store, f, indent=2)
+
+
+_load_file()
+
+
+def get_vault_client():
+    return None
 
 
 def ensure_vault_mount(path: str = "media_basket") -> None:
-    if not client.secrets.kv.v2.list_secrets(mount_point=path):
-        try:
-            client.sys.enable_secrets_engine(
-                backend_type="kv",
-                path=path,
-                options={"version": "2"},
-            )
-        except Exception:
-            pass
+    pass
 
 
 def store_secret(org_id: str, service_id: str, data: dict, path: str | None = None) -> str:
     vault_path = path or f"{settings.VAULT_MOUNT_PATH}/{org_id}/{service_id}"
-    client.secrets.kv.v2.create_or_update_secret(
-        mount_point=settings.VAULT_MOUNT_PATH,
-        path=f"{org_id}/{service_id}",
-        secret=data,
-    )
+    _secrets_store[vault_path] = data
+    _save_file()
     return vault_path
 
 
 def read_secret(org_id: str, service_id: str) -> dict | None:
-    try:
-        result = client.secrets.kv.v2.read_secret(
-            mount_point=settings.VAULT_MOUNT_PATH,
-            path=f"{org_id}/{service_id}",
-        )
-        return result.get("data", {}).get("data", {})
-    except Exception:
-        return None
+    vault_path = f"{settings.VAULT_MOUNT_PATH}/{org_id}/{service_id}"
+    return _secrets_store.get(vault_path)
 
 
 def delete_secret(org_id: str, service_id: str) -> bool:
-    try:
-        client.secrets.kv.v2.delete_secret(
-            mount_point=settings.VAULT_MOUNT_PATH,
-            path=f"{org_id}/{service_id}",
-        )
+    vault_path = f"{settings.VAULT_MOUNT_PATH}/{org_id}/{service_id}"
+    if vault_path in _secrets_store:
+        del _secrets_store[vault_path]
+        _save_file()
         return True
-    except Exception:
-        return False
+    return False
