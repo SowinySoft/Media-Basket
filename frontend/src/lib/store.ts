@@ -193,7 +193,6 @@ export const useStore = create<TreeState>((set, get) => ({
     const orgId = get().org?.id;
     if (!token || !orgId) return;
 
-    set({ isLoading: true });
     try {
       const params = new URLSearchParams();
       if (serviceId) params.append("service_id", serviceId);
@@ -205,8 +204,6 @@ export const useStore = create<TreeState>((set, get) => ({
       set({ content });
     } catch (err: any) {
       set({ error: err.message });
-    } finally {
-      set({ isLoading: false });
     }
   },
 
