@@ -36,6 +36,7 @@ export default function TreePage() {
     const init = async () => {
       await fetchUser();
       await fetchServices();
+      await fetchContent();
       setIsLoading(false);
     };
 

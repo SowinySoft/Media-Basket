@@ -242,7 +242,10 @@ export const useStore = create<TreeState>((set, get) => ({
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (res.ok) return data;
+      if (res.ok) {
+        await get().fetchContent();
+        return data;
+      }
       throw new Error(data.detail || "Sync failed");
     } catch (err: any) {
       set({ error: err.message });
