@@ -30,7 +30,7 @@ const contentIcons: Record<string, any> = {
 };
 
 function NodeRenderer({ node, style, dragHandle }: any) {
-  const { syncService } = useStore();
+  const { connectService } = useStore();
   const [syncing, setSyncing] = useState(false);
   const isService = node.data.type === "service";
   const Icon = isService ? null : contentIcons[node.data.contentType] || FileText;
@@ -43,10 +43,12 @@ function NodeRenderer({ node, style, dragHandle }: any) {
       ? "text-red-500"
       : "text-gray-500";
 
-  const handleSync = async (e: React.MouseEvent) => {
+  const handleConnect = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setSyncing(true);
-    await syncService(node.data.id || node.id);
+    const serviceId = node.data.id || node.id;
+    const connectorType = node.data.connectorType || node.data.data?.connector_type;
+    await connectService(serviceId, connectorType);
     setSyncing(false);
   };
 
@@ -54,7 +56,7 @@ function NodeRenderer({ node, style, dragHandle }: any) {
     <div
       ref={dragHandle}
       style={style}
-      className="flex items-center gap-2 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer group"
+      className="flex items-center gap-2 px-2 py-1 hover:bg-gray-700 cursor-pointer group"
     >
       {isService ? (
         <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -68,9 +70,9 @@ function NodeRenderer({ node, style, dragHandle }: any) {
             {connectorIcons[node.data.connectorType] || node.data.connectorType}
           </span>
           <button
-            onClick={handleSync}
+            onClick={handleConnect}
             className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-            title="Sync"
+            title="Connect to OAuth"
             disabled={syncing}
           >
             <RefreshCw className={`w-3 h-3 ${syncing ? "animate-spin" : ""}`} />

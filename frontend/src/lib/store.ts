@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 interface User {
   id: string;
@@ -65,6 +65,7 @@ interface TreeState {
   fetchContent: (serviceId?: string) => Promise<void>;
   createService: (connectorType: string, displayName: string) => Promise<void>;
   syncService: (serviceId: string) => Promise<any>;
+  connectService: (serviceId: string, connectorType: string) => Promise<void>;
   deleteService: (serviceId: string) => Promise<void>;
   moderateContent: (contentId: string, action: string, details?: any) => Promise<void>;
   setSelectedService: (serviceId: string | null) => void;
@@ -152,7 +153,11 @@ export const useStore = create<TreeState>((set, get) => ({
       });
       if (!res.ok) throw new Error("Failed to fetch user");
       const user = await res.json();
-      set({ user });
+
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const org = { id: payload.org_id, name: "My Organization", slug: "my-org", plan: "free" };
+
+      set({ user, org });
     } catch (err) {
       console.error("Failed to fetch user:", err);
     }
@@ -236,8 +241,27 @@ export const useStore = create<TreeState>((set, get) => ({
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed to sync service");
-      return await res.json();
+      const data = await res.json();
+      if (res.ok) return data;
+      throw new Error(data.detail || "Sync failed");
+    } catch (err: any) {
+      set({ error: err.message });
+    }
+  },
+
+  connectService: async (serviceId, connectorType) => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/services/auth/${connectorType}?service_id=${serviceId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to get auth URL");
+      const data = await res.json();
+      if (data.auth_url) {
+        window.location.href = data.auth_url;
+      }
     } catch (err: any) {
       set({ error: err.message });
     }
@@ -290,7 +314,7 @@ export const useStore = create<TreeState>((set, get) => ({
     const token = localStorage.getItem("access_token");
     if (!orgId || !token) return;
 
-    const ws = new WebSocket(`ws://localhost:3001/api/v1/ws/${orgId}?token=${token}`);
+    const ws = new WebSocket(`ws://localhost:8000/api/v1/ws/${orgId}?token=${token}`);
 
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);

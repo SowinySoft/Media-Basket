@@ -35,6 +35,16 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
+    # YouTube
+    YOUTUBE_CLIENT_ID: str = ""
+    YOUTUBE_CLIENT_SECRET: str = ""
+    YOUTUBE_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/youtube"
+
+    # Reddit
+    REDDIT_CLIENT_ID: str = ""
+    REDDIT_CLIENT_SECRET: str = ""
+    REDDIT_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/reddit"
+
     # SaaS
     DEFAULT_ORG_NAME: str = "My Organization"
     DEFAULT_PLAN: str = "free"
