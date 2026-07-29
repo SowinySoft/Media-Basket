@@ -96,6 +96,34 @@ export const api = {
     getChannelInfo: (orgId: string, serviceId: string) =>
       request<{ channel: any }>(`/orgs/${orgId}/services/${serviceId}/youtube/channel`),
   },
+  reddit: {
+    getComments: (orgId: string, serviceId: string, postId: string) =>
+      request<{ comments: any[] }>(`/orgs/${orgId}/services/${serviceId}/reddit/post/${postId}/comments`),
+    moderateComment: (orgId: string, serviceId: string, commentId: string, action: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/reddit/comment/${commentId}/action?action=${action}`, {
+        method: "POST",
+      }),
+    replyToComment: (orgId: string, serviceId: string, commentId: string, message: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/reddit/comment/${commentId}/reply?message=${encodeURIComponent(message)}`, {
+        method: "POST",
+      }),
+    getSubredditInfo: (orgId: string, serviceId: string) =>
+      request<{ subreddit: any }>(`/orgs/${orgId}/services/${serviceId}/reddit/subreddit`),
+  },
+  whatsapp: {
+    getMessages: (orgId: string, serviceId: string, conversationId: string) =>
+      request<{ messages: any[] }>(`/orgs/${orgId}/services/${serviceId}/whatsapp/conversation/${conversationId}/messages`),
+    moderateMessage: (orgId: string, serviceId: string, messageId: string, action: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/whatsapp/message/${messageId}/action?action=${action}`, {
+        method: "POST",
+      }),
+    replyToConversation: (orgId: string, serviceId: string, conversationId: string, message: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/whatsapp/conversation/${conversationId}/reply?message=${encodeURIComponent(message)}`, {
+        method: "POST",
+      }),
+    getContactInfo: (orgId: string, serviceId: string, conversationId: string) =>
+      request<{ contact: any }>(`/orgs/${orgId}/services/${serviceId}/whatsapp/contact/${conversationId}`),
+  },
   billing: {
     getPlan: () => request<any>("/billing/plan"),
     getUsage: () => request<any>("/billing/usage"),

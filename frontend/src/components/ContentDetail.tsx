@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { X, Trash2, Flag, CheckCircle } from "lucide-react";
+import { X, Trash2, Flag, CheckCircle, Settings } from "lucide-react";
 import YouTubePanel from "./YouTubePanel";
+import RedditPanel from "./RedditPanel";
+import WhatsAppPanel from "./WhatsAppPanel";
 
 export default function ContentDetail() {
   const { content, selectedContentId, setSelectedContent, moderateContent, services } = useStore();
-  const [showYouTube, setShowYouTube] = useState(false);
+  const [showServicePanel, setShowServicePanel] = useState(false);
 
   const selectedItem = content.find((c) => c.id === selectedContentId);
 
@@ -23,25 +25,60 @@ export default function ContentDetail() {
 
   const metadata = selectedItem.metadata;
   const payload = selectedItem.payload;
-  const isYouTube = selectedItem.content_type === "video" && selectedItem.external_id?.length === 11;
+  const service = services.find((s) => s.id === selectedItem.service_instance_id);
+  const connectorType = service?.connector_type || "";
 
-  if (showYouTube && isYouTube) {
-    const stats = {
-      views: payload?.statistics?.viewCount || "0",
-      likes: payload?.statistics?.likeCount || "0",
-      comments: payload?.statistics?.commentCount || "0",
-    };
-    const svc = services.find((s) => s.id === selectedItem.service_instance_id);
-    return (
-      <YouTubePanel
-        serviceId={selectedItem.service_instance_id}
-        videoId={selectedItem.external_id}
-        title={payload?.snippet?.title || ""}
-        description={payload?.snippet?.description || ""}
-        stats={stats}
-        onClose={() => setShowYouTube(false)}
-      />
-    );
+  // Determine which panel to show
+  const isYouTube = connectorType === "youtube" && selectedItem.content_type === "video";
+  const isReddit = connectorType === "reddit" && (selectedItem.content_type === "post" || selectedItem.content_type === "comment");
+  const isWhatsApp = connectorType === "whatsapp" && (selectedItem.content_type === "message" || selectedItem.content_type === "conversation");
+
+  if (showServicePanel) {
+    if (isYouTube) {
+      const stats = {
+        views: payload?.statistics?.viewCount || "0",
+        likes: payload?.statistics?.likeCount || "0",
+        comments: payload?.statistics?.commentCount || "0",
+      };
+      return (
+        <YouTubePanel
+          serviceId={selectedItem.service_instance_id}
+          videoId={selectedItem.external_id}
+          title={payload?.snippet?.title || ""}
+          description={payload?.snippet?.description || ""}
+          stats={stats}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
+
+    if (isReddit) {
+      const stats = {
+        score: payload?.score || "0",
+        comments: payload?.num_comments || "0",
+      };
+      return (
+        <RedditPanel
+          serviceId={selectedItem.service_instance_id}
+          postId={selectedItem.external_id}
+          postTitle={payload?.title || ""}
+          postBody={payload?.selftext || payload?.body || ""}
+          stats={stats}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
+
+    if (isWhatsApp) {
+      return (
+        <WhatsAppPanel
+          serviceId={selectedItem.service_instance_id}
+          conversationId={selectedItem.external_id}
+          contactName={payload?.from || payload?.contact_name || "Unknown"}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
   }
 
   const getSentimentColor = (sentiment?: string) => {
@@ -59,6 +96,8 @@ export default function ContentDetail() {
     await moderateContent(selectedItem.id, action);
     setSelectedContent(null);
   };
+
+  const canOpenManager = isYouTube || isReddit || isWhatsApp;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -81,7 +120,7 @@ export default function ContentDetail() {
         <div>
           <label className="text-xs text-gray-400 uppercase">Content</label>
           <div className="mt-1 p-3 bg-gray-800 border border-gray-700 rounded text-sm whitespace-pre-wrap text-white">
-            {payload?.snippet?.title || payload?.title || payload?.text || "No content"}
+            {payload?.snippet?.title || payload?.title || payload?.text || payload?.body || "No content"}
           </div>
         </div>
 
@@ -100,12 +139,33 @@ export default function ContentDetail() {
               />
             </div>
             <button
-              onClick={() => setShowYouTube(true)}
-              className="mt-2 w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+              onClick={() => setShowServicePanel(true)}
+              className="mt-2 w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium flex items-center justify-center gap-2"
             >
+              <Settings className="w-4 h-4" />
               Open YouTube Manager
             </button>
           </div>
+        )}
+
+        {isReddit && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open Reddit Manager
+          </button>
+        )}
+
+        {isWhatsApp && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open WhatsApp Manager
+          </button>
         )}
 
         {payload?.snippet?.description && (
