@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store";
 import TreeView from "@/components/TreeView";
@@ -8,7 +8,7 @@ import ContentDetail from "@/components/ContentDetail";
 import AddServiceModal from "@/components/AddServiceModal";
 import { Search, Plus, RefreshCw, LogOut } from "lucide-react";
 
-export default function TreePage() {
+function TreePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
@@ -152,5 +152,20 @@ export default function TreePage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function TreePage() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen items-center justify-center bg-gray-900">
+        <div className="flex items-center gap-2 text-white">
+          <RefreshCw className="w-5 h-5 animate-spin" />
+          <p>Loading...</p>
+        </div>
+      </main>
+    }>
+      <TreePageInner />
+    </Suspense>
   );
 }
