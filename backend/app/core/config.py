@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     REDDIT_CLIENT_SECRET: str = ""
     REDDIT_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/reddit"
 
+    # WhatsApp Business API
+    WHATSAPP_APP_ID: str = ""
+    WHATSAPP_APP_SECRET: str = ""
+    WHATSAPP_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/whatsapp"
+    WHATSAPP_VERIFY_TOKEN: str = "media-basket-verify"
+    WHATSAPP_PHONE_NUMBER_ID: str = ""
+
     # SaaS
     DEFAULT_ORG_NAME: str = "My Organization"
     DEFAULT_PLAN: str = "free"
