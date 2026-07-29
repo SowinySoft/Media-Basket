@@ -200,8 +200,7 @@ export default function TreeView() {
   return (
     <div className="h-full">
       <Tree
-        data={filteredTreeData}
-        nodeRenderer={NodeRenderer}
+        data={filteredTreeData as any}
         onSelect={handleSelect}
         openByDefault={true}
         width="100%"

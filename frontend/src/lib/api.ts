@@ -82,6 +82,20 @@ export const api = {
       }),
     list: (orgId: string) => request<any[]>(`/orgs/${orgId}/moderation`),
   },
+  youtube: {
+    getComments: (orgId: string, serviceId: string, videoId: string) =>
+      request<{ comments: any[] }>(`/orgs/${orgId}/services/${serviceId}/youtube/video/${videoId}`),
+    moderateComment: (orgId: string, serviceId: string, commentId: string, action: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/youtube/comment/${commentId}/action?action=${action}`, {
+        method: "POST",
+      }),
+    replyToComment: (orgId: string, serviceId: string, commentId: string, message: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/youtube/comment/${commentId}/reply?message=${encodeURIComponent(message)}`, {
+        method: "POST",
+      }),
+    getChannelInfo: (orgId: string, serviceId: string) =>
+      request<{ channel: any }>(`/orgs/${orgId}/services/${serviceId}/youtube/channel`),
+  },
   billing: {
     getPlan: () => request<any>("/billing/plan"),
     getUsage: () => request<any>("/billing/usage"),

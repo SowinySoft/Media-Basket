@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import get_settings
-from app.routes import auth, services, content, moderation, billing, health, oauth, websocket
+from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube
 from app.middleware.tenant import TenantMiddleware
 
 settings = get_settings()
@@ -39,6 +39,7 @@ app.include_router(moderation.router, prefix="/api/v1/orgs/{org_id}/moderation",
 app.include_router(billing.router, prefix="/api/v1/billing", tags=["billing"])
 app.include_router(oauth.router, prefix="/api/v1/services", tags=["oauth"])
 app.include_router(websocket.router, prefix="/api/v1", tags=["websocket"])
+app.include_router(youtube.router, prefix="/api/v1/orgs/{org_id}/services", tags=["youtube"])
 
 
 @app.get("/")

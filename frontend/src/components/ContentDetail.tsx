@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { X, Trash2, Flag, CheckCircle } from "lucide-react";
+import YouTubePanel from "./YouTubePanel";
 
 export default function ContentDetail() {
-  const { content, selectedContentId, setSelectedContent, moderateContent } = useStore();
+  const { content, selectedContentId, setSelectedContent, moderateContent, services } = useStore();
+  const [showYouTube, setShowYouTube] = useState(false);
 
   const selectedItem = content.find((c) => c.id === selectedContentId);
 
@@ -20,6 +23,26 @@ export default function ContentDetail() {
 
   const metadata = selectedItem.metadata;
   const payload = selectedItem.payload;
+  const isYouTube = selectedItem.content_type === "video" && selectedItem.external_id?.length === 11;
+
+  if (showYouTube && isYouTube) {
+    const stats = {
+      views: payload?.statistics?.viewCount || "0",
+      likes: payload?.statistics?.likeCount || "0",
+      comments: payload?.statistics?.commentCount || "0",
+    };
+    const svc = services.find((s) => s.id === selectedItem.service_instance_id);
+    return (
+      <YouTubePanel
+        serviceId={selectedItem.service_instance_id}
+        videoId={selectedItem.external_id}
+        title={payload?.snippet?.title || ""}
+        description={payload?.snippet?.description || ""}
+        stats={stats}
+        onClose={() => setShowYouTube(false)}
+      />
+    );
+  }
 
   const getSentimentColor = (sentiment?: string) => {
     switch (sentiment) {
@@ -61,6 +84,29 @@ export default function ContentDetail() {
             {payload?.snippet?.title || payload?.title || payload?.text || "No content"}
           </div>
         </div>
+
+        {selectedItem.content_type === "video" && selectedItem.external_id && (
+          <div>
+            <label className="text-xs text-gray-400 uppercase">Preview</label>
+            <div className="mt-1 aspect-video rounded-lg overflow-hidden bg-black">
+              <iframe
+                width="100%"
+                height="100%"
+                src={`https://www.youtube.com/embed/${selectedItem.external_id}`}
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+            <button
+              onClick={() => setShowYouTube(true)}
+              className="mt-2 w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+            >
+              Open YouTube Manager
+            </button>
+          </div>
+        )}
 
         {payload?.snippet?.description && (
           <div>
