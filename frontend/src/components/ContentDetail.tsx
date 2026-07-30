@@ -15,6 +15,9 @@ import TikTokPanel from "./TikTokPanel";
 import DiscordPanel from "./DiscordPanel";
 import SlackPanel from "./SlackPanel";
 import MastodonPanel from "./MastodonPanel";
+import PinterestPanel from "./PinterestPanel";
+import SnapchatPanel from "./SnapchatPanel";
+import BlueskyPanel from "./BlueskyPanel";
 
 export default function ContentDetail() {
   const { content, selectedContentId, setSelectedContent, moderateContent, services } = useStore();
@@ -50,6 +53,9 @@ export default function ContentDetail() {
   const isDiscord = connectorType === "discord" && (selectedItem.content_type === "message" || selectedItem.content_type === "channel");
   const isSlack = connectorType === "slack" && (selectedItem.content_type === "message" || selectedItem.content_type === "channel");
   const isMastodon = connectorType === "mastodon" && (selectedItem.content_type === "status" || selectedItem.content_type === "notification");
+  const isPinterest = connectorType === "pinterest" && (selectedItem.content_type === "pin" || selectedItem.content_type === "board");
+  const isSnapchat = connectorType === "snapchat" && (selectedItem.content_type === "story" || selectedItem.content_type === "snap");
+  const isBluesky = connectorType === "bluesky" && (selectedItem.content_type === "post" || selectedItem.content_type === "notification");
 
   if (showServicePanel) {
     if (isYouTube) {
@@ -178,6 +184,33 @@ export default function ContentDetail() {
         />
       );
     }
+
+    if (isPinterest) {
+      return (
+        <PinterestPanel
+          serviceId={selectedItem.service_instance_id}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
+
+    if (isSnapchat) {
+      return (
+        <SnapchatPanel
+          serviceId={selectedItem.service_instance_id}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
+
+    if (isBluesky) {
+      return (
+        <BlueskyPanel
+          serviceId={selectedItem.service_instance_id}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
   }
 
   const getSentimentColor = (sentiment?: string) => {
@@ -196,7 +229,7 @@ export default function ContentDetail() {
     setSelectedContent(null);
   };
 
-  const canOpenManager = isYouTube || isReddit || isWhatsApp || isTelegram || isInstagram || isTwitter || isFacebook || isLinkedIn || isTikTok || isDiscord || isSlack || isMastodon;
+  const canOpenManager = isYouTube || isReddit || isWhatsApp || isTelegram || isInstagram || isTwitter || isFacebook || isLinkedIn || isTikTok || isDiscord || isSlack || isMastodon || isPinterest || isSnapchat || isBluesky;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -354,6 +387,36 @@ export default function ContentDetail() {
           >
             <Settings className="w-4 h-4" />
             Open Mastodon Manager
+          </button>
+        )}
+
+        {isPinterest && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open Pinterest Manager
+          </button>
+        )}
+
+        {isSnapchat && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open Snapchat Manager
+          </button>
+        )}
+
+        {isBluesky && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open Bluesky Manager
           </button>
         )}
 

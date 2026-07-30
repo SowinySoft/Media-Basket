@@ -12,6 +12,9 @@ from app.connectors.tiktok import TikTokConnector
 from app.connectors.discord import DiscordConnector
 from app.connectors.slack import SlackConnector
 from app.connectors.mastodon import MastodonConnector
+from app.connectors.pinterest import PinterestConnector
+from app.connectors.snapchat import SnapchatConnector
+from app.connectors.bluesky import BlueskyConnector
 from app.connectors.base import ConnectorPlugin
 
 CONNECTOR_REGISTRY: dict[str, ConnectorPlugin] = {}
@@ -34,6 +37,9 @@ def register_connectors():
     CONNECTOR_REGISTRY["discord"] = DiscordConnector()
     CONNECTOR_REGISTRY["slack"] = SlackConnector()
     CONNECTOR_REGISTRY["mastodon"] = MastodonConnector()
+    CONNECTOR_REGISTRY["pinterest"] = PinterestConnector()
+    CONNECTOR_REGISTRY["snapchat"] = SnapchatConnector()
+    CONNECTOR_REGISTRY["bluesky"] = BlueskyConnector()
 
 
 register_connectors()

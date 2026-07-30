@@ -238,6 +238,32 @@ export const api = {
         method: "POST",
       }),
   },
+  pinterest: {
+    getProfile: (orgId: string, serviceId: string) =>
+      request<{ profile: any }>(`/orgs/${orgId}/services/${serviceId}/pinterest/profile`),
+    getBoards: (orgId: string, serviceId: string) =>
+      request<{ boards: any[] }>(`/orgs/${orgId}/services/${serviceId}/pinterest/boards`),
+    getPins: (orgId: string, serviceId: string, boardId: string) =>
+      request<{ pins: any[] }>(`/orgs/${orgId}/services/${serviceId}/pinterest/board/${boardId}/pins`),
+  },
+  snapchat: {
+    getProfile: (orgId: string, serviceId: string) =>
+      request<{ profile: any }>(`/orgs/${orgId}/services/${serviceId}/snapchat/profile`),
+    getStories: (orgId: string, serviceId: string) =>
+      request<{ stories: any[] }>(`/orgs/${orgId}/services/${serviceId}/snapchat/stories`),
+  },
+  bluesky: {
+    getProfile: (orgId: string, serviceId: string) =>
+      request<{ profile: any }>(`/orgs/${orgId}/services/${serviceId}/bluesky/profile`),
+    getFeed: (orgId: string, serviceId: string) =>
+      request<{ posts: any[] }>(`/orgs/${orgId}/services/${serviceId}/bluesky/feed`),
+    getNotifications: (orgId: string, serviceId: string) =>
+      request<{ notifications: any[] }>(`/orgs/${orgId}/services/${serviceId}/bluesky/notifications`),
+    post: (orgId: string, serviceId: string, message: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/bluesky/post?message=${encodeURIComponent(message)}`, {
+        method: "POST",
+      }),
+  },
   billing: {
     getPlan: () => request<any>("/billing/plan"),
     getUsage: () => request<any>("/billing/usage"),

@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Youtube, MessageCircle, Phone, Send, Image, Twitter, Facebook, Briefcase, Video, ExternalLink, Copy, CheckCircle, Gamepad2, Slack, Globe } from "lucide-react";
+import { Youtube, MessageCircle, Phone, Send, Image, Twitter, Facebook, Briefcase, Video, ExternalLink, Copy, CheckCircle, Gamepad2, Slack, Globe, MapPin, Ghost, Cloud } from "lucide-react";
 
 export interface ConnectorConfig {
   type: string;
@@ -341,6 +341,75 @@ export const CONNECTOR_CONFIGS: Record<string, ConnectorConfig> = {
           "Create a new application",
           "Set scopes: read, write, follow",
           "Copy Client ID and Client Secret",
+        ],
+      },
+    ],
+  },
+  pinterest: {
+    type: "pinterest",
+    name: "Pinterest",
+    icon: MapPin,
+    color: "text-red-600",
+    description: "Connect Pinterest to manage pins, boards, and visual content.",
+    setupUrl: "https://developers.pinterest.com/",
+    steps: [
+      {
+        id: "welcome",
+        title: "Connect Pinterest",
+        description: "Authorize access to your Pinterest account",
+        fields: [],
+        instructions: [
+          "Click 'Next' to be redirected to Pinterest",
+          "Log in with your Pinterest account",
+          "Grant access to your boards and pins",
+          "You'll be redirected back automatically",
+        ],
+      },
+    ],
+  },
+  snapchat: {
+    type: "snapchat",
+    name: "Snapchat",
+    icon: Ghost,
+    color: "text-yellow-400",
+    description: "Connect Snapchat to manage stories and content.",
+    setupUrl: "https://developers.snap.com/",
+    steps: [
+      {
+        id: "welcome",
+        title: "Connect Snapchat",
+        description: "Authorize access to your Snapchat account",
+        fields: [],
+        instructions: [
+          "Click 'Next' to be redirected to Snapchat",
+          "Log in with your Snapchat account",
+          "Grant access to your stories",
+          "You'll be redirected back automatically",
+        ],
+      },
+    ],
+  },
+  bluesky: {
+    type: "bluesky",
+    name: "Bluesky",
+    icon: Cloud,
+    color: "text-sky-500",
+    description: "Connect Bluesky to manage posts, feed, and notifications.",
+    setupUrl: "https://bsky.app/settings/app-passwords",
+    steps: [
+      {
+        id: "credentials",
+        title: "Bluesky Credentials",
+        description: "Enter your Bluesky handle and app password",
+        fields: [
+          { key: "handle", label: "Handle", placeholder: "yourname.bsky.social", help: "Your Bluesky handle" },
+          { key: "app_password", label: "App Password", type: "password", placeholder: "...", help: "Create in Settings > App Passwords" },
+        ],
+        instructions: [
+          "Go to bsky.app > Settings > App Passwords",
+          "Create a new app password",
+          "Copy the password",
+          "Enter your handle and the app password",
         ],
       },
     ],

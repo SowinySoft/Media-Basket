@@ -101,6 +101,20 @@ class Settings(BaseSettings):
     MASTODON_ACCESS_TOKEN: str = ""
     MASTODON_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/mastodon"
 
+    # Pinterest
+    PINTEREST_APP_ID: str = ""
+    PINTEREST_APP_SECRET: str = ""
+    PINTEREST_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/pinterest"
+
+    # Snapchat
+    SNAPCHAT_CLIENT_ID: str = ""
+    SNAPCHAT_CLIENT_SECRET: str = ""
+    SNAPCHAT_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/snapchat"
+
+    # Bluesky
+    BLUESKY_HANDLE: str = ""
+    BLUESKY_APP_PASSWORD: str = ""
+
     # SaaS
     DEFAULT_ORG_NAME: str = "My Organization"
     DEFAULT_PLAN: str = "free"

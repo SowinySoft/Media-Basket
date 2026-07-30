@@ -28,6 +28,9 @@ const connectorIcons: Record<string, string> = {
   discord: "Discord",
   slack: "Slack",
   mastodon: "Mastodon",
+  pinterest: "Pinterest",
+  snapchat: "Snapchat",
+  bluesky: "Bluesky",
 };
 
 const contentIcons: Record<string, any> = {
