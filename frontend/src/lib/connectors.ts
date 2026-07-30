@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Youtube, MessageCircle, Phone, Send, Image, Twitter, ExternalLink, Copy, CheckCircle } from "lucide-react";
+import { Youtube, MessageCircle, Phone, Send, Image, Twitter, Facebook, Briefcase, Video, ExternalLink, Copy, CheckCircle } from "lucide-react";
 
 export interface ConnectorConfig {
   type: string;
@@ -189,6 +189,72 @@ export const CONNECTOR_CONFIGS: Record<string, ConnectorConfig> = {
         instructions: [
           "Click 'Next' to be redirected to Twitter",
           "Log in with your Twitter account",
+          "Authorize the application",
+          "You'll be redirected back automatically",
+        ],
+      },
+    ],
+  },
+  facebook: {
+    type: "facebook",
+    name: "Facebook",
+    icon: Facebook,
+    color: "text-blue-600",
+    description: "Connect your Facebook page to manage posts, comments, and engagement.",
+    setupUrl: "https://developers.facebook.com/",
+    steps: [
+      {
+        id: "welcome",
+        title: "Connect Facebook",
+        description: "Authorize access to your Facebook page",
+        fields: [],
+        instructions: [
+          "Click 'Next' to be redirected to Facebook",
+          "Log in with your Facebook account",
+          "Grant access to your pages",
+          "You'll be redirected back automatically",
+        ],
+      },
+    ],
+  },
+  linkedin: {
+    type: "linkedin",
+    name: "LinkedIn",
+    icon: Briefcase,
+    color: "text-blue-700",
+    description: "Connect LinkedIn to manage posts, comments, and professional network.",
+    setupUrl: "https://www.linkedin.com/developers/",
+    steps: [
+      {
+        id: "welcome",
+        title: "Connect LinkedIn",
+        description: "Authorize access to your LinkedIn account",
+        fields: [],
+        instructions: [
+          "Click 'Next' to be redirected to LinkedIn",
+          "Log in with your LinkedIn account",
+          "Authorize the application",
+          "You'll be redirected back automatically",
+        ],
+      },
+    ],
+  },
+  tiktok: {
+    type: "tiktok",
+    name: "TikTok",
+    icon: Video,
+    color: "text-pink-500",
+    description: "Connect TikTok to manage videos, comments, and analytics.",
+    setupUrl: "https://developers.tiktok.com/",
+    steps: [
+      {
+        id: "welcome",
+        title: "Connect TikTok",
+        description: "Authorize access to your TikTok account",
+        fields: [],
+        instructions: [
+          "Click 'Next' to be redirected to TikTok",
+          "Log in with your TikTok account",
           "Authorize the application",
           "You'll be redirected back automatically",
         ],

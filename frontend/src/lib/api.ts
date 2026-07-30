@@ -158,6 +158,44 @@ export const api = {
         method: "POST",
       }),
   },
+  facebook: {
+    getProfile: (orgId: string, serviceId: string) =>
+      request<{ profile: any }>(`/orgs/${orgId}/services/${serviceId}/facebook/profile`),
+    getPages: (orgId: string, serviceId: string) =>
+      request<{ pages: any[] }>(`/orgs/${orgId}/services/${serviceId}/facebook/pages`),
+    getPosts: (orgId: string, serviceId: string, pageId: string) =>
+      request<{ posts: any[] }>(`/orgs/${orgId}/services/${serviceId}/facebook/page/${pageId}/posts`),
+    getComments: (orgId: string, serviceId: string, postId: string) =>
+      request<{ comments: any[] }>(`/orgs/${orgId}/services/${serviceId}/facebook/post/${postId}/comments`),
+    postComment: (orgId: string, serviceId: string, postId: string, message: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/facebook/post/${postId}/comment?message=${encodeURIComponent(message)}`, {
+        method: "POST",
+      }),
+  },
+  linkedin: {
+    getProfile: (orgId: string, serviceId: string) =>
+      request<{ profile: any }>(`/orgs/${orgId}/services/${serviceId}/linkedin/profile`),
+    getPosts: (orgId: string, serviceId: string) =>
+      request<{ posts: any[] }>(`/orgs/${orgId}/services/${serviceId}/linkedin/posts`),
+    getComments: (orgId: string, serviceId: string, postUrn: string) =>
+      request<{ comments: any[] }>(`/orgs/${orgId}/services/${serviceId}/linkedin/post/${encodeURIComponent(postUrn)}/comments`),
+    postComment: (orgId: string, serviceId: string, postUrn: string, message: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/linkedin/post/${encodeURIComponent(postUrn)}/comment?message=${encodeURIComponent(message)}`, {
+        method: "POST",
+      }),
+  },
+  tiktok: {
+    getProfile: (orgId: string, serviceId: string) =>
+      request<{ profile: any }>(`/orgs/${orgId}/services/${serviceId}/tiktok/profile`),
+    getVideos: (orgId: string, serviceId: string) =>
+      request<{ videos: any[] }>(`/orgs/${orgId}/services/${serviceId}/tiktok/videos`),
+    getComments: (orgId: string, serviceId: string, videoId: string) =>
+      request<{ comments: any[] }>(`/orgs/${orgId}/services/${serviceId}/tiktok/video/${videoId}/comments`),
+    postComment: (orgId: string, serviceId: string, videoId: string, message: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/tiktok/video/${videoId}/comment?message=${encodeURIComponent(message)}`, {
+        method: "POST",
+      }),
+  },
   billing: {
     getPlan: () => request<any>("/billing/plan"),
     getUsage: () => request<any>("/billing/usage"),

@@ -9,6 +9,9 @@ import WhatsAppPanel from "./WhatsAppPanel";
 import TelegramPanel from "./TelegramPanel";
 import InstagramPanel from "./InstagramPanel";
 import TwitterPanel from "./TwitterPanel";
+import FacebookPanel from "./FacebookPanel";
+import LinkedInPanel from "./LinkedInPanel";
+import TikTokPanel from "./TikTokPanel";
 
 export default function ContentDetail() {
   const { content, selectedContentId, setSelectedContent, moderateContent, services } = useStore();
@@ -38,6 +41,9 @@ export default function ContentDetail() {
   const isTelegram = connectorType === "telegram" && (selectedItem.content_type === "message" || selectedItem.content_type === "chat");
   const isInstagram = connectorType === "instagram" && (selectedItem.content_type === "post" || selectedItem.content_type === "comment");
   const isTwitter = connectorType === "twitter" && (selectedItem.content_type === "tweet" || selectedItem.content_type === "mention");
+  const isFacebook = connectorType === "facebook" && (selectedItem.content_type === "post" || selectedItem.content_type === "comment");
+  const isLinkedIn = connectorType === "linkedin" && (selectedItem.content_type === "post" || selectedItem.content_type === "comment");
+  const isTikTok = connectorType === "tiktok" && (selectedItem.content_type === "video" || selectedItem.content_type === "comment");
 
   if (showServicePanel) {
     if (isYouTube) {
@@ -112,6 +118,33 @@ export default function ContentDetail() {
         />
       );
     }
+
+    if (isFacebook) {
+      return (
+        <FacebookPanel
+          serviceId={selectedItem.service_instance_id}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
+
+    if (isLinkedIn) {
+      return (
+        <LinkedInPanel
+          serviceId={selectedItem.service_instance_id}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
+
+    if (isTikTok) {
+      return (
+        <TikTokPanel
+          serviceId={selectedItem.service_instance_id}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
   }
 
   const getSentimentColor = (sentiment?: string) => {
@@ -130,7 +163,7 @@ export default function ContentDetail() {
     setSelectedContent(null);
   };
 
-  const canOpenManager = isYouTube || isReddit || isWhatsApp || isTelegram || isInstagram || isTwitter;
+  const canOpenManager = isYouTube || isReddit || isWhatsApp || isTelegram || isInstagram || isTwitter || isFacebook || isLinkedIn || isTikTok;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -228,6 +261,36 @@ export default function ContentDetail() {
           >
             <Settings className="w-4 h-4" />
             Open Twitter Manager
+          </button>
+        )}
+
+        {isFacebook && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open Facebook Manager
+          </button>
+        )}
+
+        {isLinkedIn && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open LinkedIn Manager
+          </button>
+        )}
+
+        {isTikTok && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open TikTok Manager
           </button>
         )}
 

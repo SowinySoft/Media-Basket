@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import get_settings
-from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter
+from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter, facebook, linkedin, tiktok
 from app.middleware.tenant import TenantMiddleware
 
 settings = get_settings()
@@ -46,6 +46,9 @@ app.include_router(whatsapp_webhook.router, prefix="/api/v1/services", tags=["we
 app.include_router(telegram.router, prefix="/api/v1/orgs/{org_id}/services", tags=["telegram"])
 app.include_router(instagram.router, prefix="/api/v1/orgs/{org_id}/services", tags=["instagram"])
 app.include_router(twitter.router, prefix="/api/v1/orgs/{org_id}/services", tags=["twitter"])
+app.include_router(facebook.router, prefix="/api/v1/orgs/{org_id}/services", tags=["facebook"])
+app.include_router(linkedin.router, prefix="/api/v1/orgs/{org_id}/services", tags=["linkedin"])
+app.include_router(tiktok.router, prefix="/api/v1/orgs/{org_id}/services", tags=["tiktok"])
 
 
 @app.get("/")

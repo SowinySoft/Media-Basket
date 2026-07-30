@@ -67,6 +67,21 @@ class Settings(BaseSettings):
     TWITTER_CLIENT_SECRET: str = ""
     TWITTER_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/twitter"
 
+    # Facebook
+    FACEBOOK_APP_ID: str = ""
+    FACEBOOK_APP_SECRET: str = ""
+    FACEBOOK_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/facebook"
+
+    # LinkedIn
+    LINKEDIN_CLIENT_ID: str = ""
+    LINKEDIN_CLIENT_SECRET: str = ""
+    LINKEDIN_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/linkedin"
+
+    # TikTok
+    TIKTOK_CLIENT_KEY: str = ""
+    TIKTOK_CLIENT_SECRET: str = ""
+    TIKTOK_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/tiktok"
+
     # SaaS
     DEFAULT_ORG_NAME: str = "My Organization"
     DEFAULT_PLAN: str = "free"

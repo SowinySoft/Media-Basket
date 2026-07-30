@@ -6,6 +6,9 @@ from app.connectors.whatsapp import WhatsAppConnector
 from app.connectors.telegram import TelegramConnector
 from app.connectors.instagram import InstagramConnector
 from app.connectors.twitter import TwitterConnector
+from app.connectors.facebook import FacebookConnector
+from app.connectors.linkedin import LinkedInConnector
+from app.connectors.tiktok import TikTokConnector
 from app.connectors.base import ConnectorPlugin
 
 CONNECTOR_REGISTRY: dict[str, ConnectorPlugin] = {}
@@ -22,6 +25,9 @@ def register_connectors():
     CONNECTOR_REGISTRY["telegram"] = TelegramConnector()
     CONNECTOR_REGISTRY["instagram"] = InstagramConnector()
     CONNECTOR_REGISTRY["twitter"] = TwitterConnector()
+    CONNECTOR_REGISTRY["facebook"] = FacebookConnector()
+    CONNECTOR_REGISTRY["linkedin"] = LinkedInConnector()
+    CONNECTOR_REGISTRY["tiktok"] = TikTokConnector()
 
 
 register_connectors()
