@@ -82,7 +82,7 @@ function TreePageInner() {
 
   return (
     <main className="flex h-screen bg-gray-900">
-      <AddServiceModal open={showAddService} onClose={() => setShowAddService(false)} />
+      {showAddService && <AddServiceModal onClose={() => setShowAddService(false)} />}
 
       {/* Sidebar */}
       <aside className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">

@@ -1,0 +1,206 @@
+"use client";
+
+import { ReactNode } from "react";
+import { Youtube, MessageCircle, Phone, Send, Image, Twitter, ExternalLink, Copy, CheckCircle } from "lucide-react";
+
+export interface ConnectorConfig {
+  type: string;
+  name: string;
+  icon: any;
+  color: string;
+  description: string;
+  setupUrl?: string;
+  steps: {
+    id: string;
+    title: string;
+    description: string;
+    fields: {
+      key: string;
+      label: string;
+      placeholder: string;
+      type?: "text" | "password" | "url";
+      help?: string;
+    }[];
+    instructions?: string[];
+  }[];
+}
+
+export const CONNECTOR_CONFIGS: Record<string, ConnectorConfig> = {
+  youtube: {
+    type: "youtube",
+    name: "YouTube",
+    icon: Youtube,
+    color: "text-red-500",
+    description: "Connect your YouTube channel to manage videos, comments, and analytics.",
+    setupUrl: "https://console.cloud.google.com/",
+    steps: [
+      {
+        id: "welcome",
+        title: "Connect YouTube",
+        description: "Authorize access to your YouTube account",
+        fields: [],
+        instructions: [
+          "Click 'Next' to be redirected to Google",
+          "Sign in with your Google account",
+          "Grant access to YouTube",
+          "You'll be redirected back automatically",
+        ],
+      },
+    ],
+  },
+  reddit: {
+    type: "reddit",
+    name: "Reddit",
+    icon: MessageCircle,
+    color: "text-orange-500",
+    description: "Connect your Reddit account to manage posts, comments, and moderation.",
+    setupUrl: "https://www.reddit.com/prefs/apps",
+    steps: [
+      {
+        id: "welcome",
+        title: "Connect Reddit",
+        description: "Authorize access to your Reddit account",
+        fields: [],
+        instructions: [
+          "Click 'Next' to be redirected to Reddit",
+          "Log in with your Reddit account",
+          "Authorize the application",
+          "You'll be redirected back automatically",
+        ],
+      },
+    ],
+  },
+  whatsapp: {
+    type: "whatsapp",
+    name: "WhatsApp Business",
+    icon: Phone,
+    color: "text-green-500",
+    description: "Connect WhatsApp Business API to send and receive messages.",
+    setupUrl: "https://developers.facebook.com/",
+    steps: [
+      {
+        id: "app_id",
+        title: "Facebook App ID",
+        description: "Enter your Facebook App ID from the developer dashboard",
+        fields: [
+          { key: "app_id", label: "App ID", placeholder: "123456789", help: "Found in App Settings > Basic" },
+        ],
+      },
+      {
+        id: "app_secret",
+        title: "Facebook App Secret",
+        description: "Enter your Facebook App Secret",
+        fields: [
+          { key: "app_secret", label: "App Secret", type: "password", placeholder: "abcdef123456", help: "Found in App Settings > Basic" },
+        ],
+      },
+      {
+        id: "phone_number_id",
+        title: "Phone Number ID",
+        description: "Enter your WhatsApp Phone Number ID",
+        fields: [
+          { key: "phone_number_id", label: "Phone Number ID", placeholder: "1234567890", help: "Found in WhatsApp > API Setup" },
+        ],
+      },
+      {
+        id: "access_token",
+        title: "Access Token",
+        description: "Enter your permanent access token",
+        fields: [
+          { key: "access_token", label: "Access Token", type: "password", placeholder: "EAA...", help: "Generate in WhatsApp > API Setup" },
+        ],
+      },
+      {
+        id: "verify",
+        title: "Verify Connection",
+        description: "We'll send a test message to verify the connection",
+        fields: [
+          { key: "phone_number", label: "Your Phone Number", placeholder: "+1234567890", help: "Phone number to receive test message" },
+        ],
+      },
+    ],
+  },
+  telegram: {
+    type: "telegram",
+    name: "Telegram",
+    icon: Send,
+    color: "text-blue-400",
+    description: "Connect a Telegram bot to send and receive messages.",
+    setupUrl: "https://t.me/BotFather",
+    steps: [
+      {
+        id: "create_bot",
+        title: "Create a Telegram Bot",
+        description: "Create a bot using BotFather",
+        fields: [],
+        instructions: [
+          "Open Telegram and search for @BotFather",
+          "Send /newbot command",
+          "Choose a name for your bot",
+          "Choose a username (must end with 'bot')",
+          "Copy the bot token",
+        ],
+      },
+      {
+        id: "bot_token",
+        title: "Bot Token",
+        description: "Enter your Telegram bot token",
+        fields: [
+          { key: "bot_token", label: "Bot Token", placeholder: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11", help: "Get from @BotFather" },
+        ],
+      },
+    ],
+  },
+  instagram: {
+    type: "instagram",
+    name: "Instagram",
+    icon: Image,
+    color: "text-pink-500",
+    description: "Connect Instagram to manage posts, comments, and analytics.",
+    setupUrl: "https://developers.facebook.com/",
+    steps: [
+      {
+        id: "welcome",
+        title: "Connect Instagram",
+        description: "Authorize access via Facebook",
+        fields: [],
+        instructions: [
+          "Instagram uses Facebook OAuth",
+          "Click 'Next' to authorize with Facebook",
+          "Grant Instagram permissions",
+          "You'll be redirected back automatically",
+        ],
+      },
+    ],
+  },
+  twitter: {
+    type: "twitter",
+    name: "Twitter/X",
+    icon: Twitter,
+    color: "text-sky-500",
+    description: "Connect Twitter/X to manage tweets, mentions, and replies.",
+    setupUrl: "https://developer.twitter.com/",
+    steps: [
+      {
+        id: "welcome",
+        title: "Connect Twitter/X",
+        description: "Authorize access to your Twitter account",
+        fields: [],
+        instructions: [
+          "Click 'Next' to be redirected to Twitter",
+          "Log in with your Twitter account",
+          "Authorize the application",
+          "You'll be redirected back automatically",
+        ],
+      },
+    ],
+  },
+};
+
+export function getConnectorConfig(type: string): ConnectorConfig | undefined {
+  return CONNECTOR_CONFIGS[type];
+}
+
+export function getAllConnectors(): ConnectorConfig[] {
+  return Object.values(CONNECTOR_CONFIGS);
+}
