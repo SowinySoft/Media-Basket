@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     WHATSAPP_VERIFY_TOKEN: str = "media-basket-verify"
     WHATSAPP_PHONE_NUMBER_ID: str = ""
     WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
+    WHATSAPP_ACCESS_TOKEN: str = ""
 
     # SaaS
     DEFAULT_ORG_NAME: str = "My Organization"

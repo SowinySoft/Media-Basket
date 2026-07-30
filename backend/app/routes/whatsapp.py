@@ -2,12 +2,74 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
+from app.core.config import get_settings
 from app.core.vault import read_secret, store_secret
 from app.models.models import ServiceInstance, ContentItem
 from app.routes.auth import get_current_user
 from app.connectors.registry import get_connector
 
+settings = get_settings()
 router = APIRouter()
+
+
+@router.get("/{service_id}/whatsapp/poll")
+async def poll_messages(
+    service_id: str,
+    last_message_id: str = None,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    org_id = current_user["org_id"]
+    connector = get_connector("whatsapp")
+    if not connector:
+        raise HTTPException(status_code=404, detail="WhatsApp connector not found")
+
+    credentials = read_secret(org_id, service_id)
+    if not credentials:
+        raise HTTPException(status_code=400, detail="No credentials")
+
+    phone_number_id = credentials.get("phone_number_id", settings.WHATSAPP_PHONE_NUMBER_ID)
+
+    # Fetch conversations
+    conversations = await connector.fetch({
+        "access_token": credentials.get("access_token", ""),
+        "type": "conversations",
+        "phone_number_id": phone_number_id,
+    })
+
+    result_conversations = []
+    for conv in conversations:
+        conv_id = conv["external_id"]
+        payload = conv["payload"]
+
+        # Fetch messages for each conversation
+        messages = await connector.fetch({
+            "access_token": credentials.get("access_token", ""),
+            "type": "messages",
+            "conversation_id": conv_id,
+            "phone_number_id": phone_number_id,
+        })
+
+        message_list = []
+        for m in messages:
+            msg_payload = m["payload"]
+            message_list.append({
+                "id": m["external_id"],
+                "from": msg_payload.get("from", ""),
+                "to": msg_payload.get("to", ""),
+                "body": msg_payload.get("text", {}).get("body", "") if msg_payload.get("text") else "",
+                "type": msg_payload.get("type", ""),
+                "timestamp": msg_payload.get("timestamp", ""),
+                "status": msg_payload.get("status", ""),
+            })
+
+        result_conversations.append({
+            "id": conv_id,
+            "payload": payload,
+            "messages": message_list,
+        })
+
+    return {"conversations": result_conversations}
 
 
 @router.get("/{service_id}/whatsapp/conversation/{conversation_id}/messages")
