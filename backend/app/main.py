@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from app.core.config import get_settings
 from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter, facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat, bluesky, search, scheduler
 from app.middleware.tenant import TenantMiddleware
+from app.core.rate_limiter import RateLimitMiddleware, rate_limiter
 
 settings = get_settings()
 
@@ -20,6 +21,9 @@ app = FastAPI(
     version=settings.APP_VERSION,
     lifespan=lifespan,
 )
+
+# Add rate limiting middleware
+app.add_middleware(RateLimitMiddleware, limiter=rate_limiter)
 
 app.add_middleware(TenantMiddleware)
 
