@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { X, Youtube, MessageCircle, Phone, ExternalLink, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { X, Youtube, MessageCircle, Phone, Send, Image, Twitter, AlertCircle, Loader2, CheckCircle } from "lucide-react";
 
 const connectors = [
   {
@@ -34,6 +34,36 @@ const connectors = [
     description: "Conversations, messages",
     setupHint: "Requires WhatsApp Business API access",
     needsOAuth: false,
+  },
+  {
+    type: "telegram",
+    name: "Telegram",
+    icon: Send,
+    color: "text-blue-400",
+    bg: "bg-blue-400/10",
+    description: "Bots, channels, messages",
+    setupHint: "Enter your Bot Token from @BotFather",
+    needsOAuth: false,
+  },
+  {
+    type: "instagram",
+    name: "Instagram",
+    icon: Image,
+    color: "text-pink-500",
+    bg: "bg-pink-500/10",
+    description: "Posts, stories, comments",
+    setupHint: "Click Connect to authorize with Facebook",
+    needsOAuth: true,
+  },
+  {
+    type: "twitter",
+    name: "Twitter/X",
+    icon: Twitter,
+    color: "text-sky-500",
+    bg: "bg-sky-500/10",
+    description: "Tweets, mentions, replies",
+    setupHint: "Click Connect to authorize with Twitter",
+    needsOAuth: true,
   },
 ];
 
@@ -136,7 +166,7 @@ export default function AddServiceModal({ open, onClose }: Props) {
               <label className="block text-sm font-medium text-gray-300 mt-4">
                 Platform
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3 max-h-64 overflow-y-auto">
                 {connectors.map((c) => {
                   const Icon = c.icon;
                   return (

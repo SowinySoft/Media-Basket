@@ -6,6 +6,9 @@ import { X, Trash2, Flag, CheckCircle, Settings } from "lucide-react";
 import YouTubePanel from "./YouTubePanel";
 import RedditPanel from "./RedditPanel";
 import WhatsAppPanel from "./WhatsAppPanel";
+import TelegramPanel from "./TelegramPanel";
+import InstagramPanel from "./InstagramPanel";
+import TwitterPanel from "./TwitterPanel";
 
 export default function ContentDetail() {
   const { content, selectedContentId, setSelectedContent, moderateContent, services } = useStore();
@@ -32,6 +35,9 @@ export default function ContentDetail() {
   const isYouTube = connectorType === "youtube" && selectedItem.content_type === "video";
   const isReddit = connectorType === "reddit" && (selectedItem.content_type === "post" || selectedItem.content_type === "comment");
   const isWhatsApp = connectorType === "whatsapp" && (selectedItem.content_type === "message" || selectedItem.content_type === "conversation");
+  const isTelegram = connectorType === "telegram" && (selectedItem.content_type === "message" || selectedItem.content_type === "chat");
+  const isInstagram = connectorType === "instagram" && (selectedItem.content_type === "post" || selectedItem.content_type === "comment");
+  const isTwitter = connectorType === "twitter" && (selectedItem.content_type === "tweet" || selectedItem.content_type === "mention");
 
   if (showServicePanel) {
     if (isYouTube) {
@@ -79,6 +85,33 @@ export default function ContentDetail() {
         />
       );
     }
+
+    if (isTelegram) {
+      return (
+        <TelegramPanel
+          serviceId={selectedItem.service_instance_id}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
+
+    if (isInstagram) {
+      return (
+        <InstagramPanel
+          serviceId={selectedItem.service_instance_id}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
+
+    if (isTwitter) {
+      return (
+        <TwitterPanel
+          serviceId={selectedItem.service_instance_id}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
   }
 
   const getSentimentColor = (sentiment?: string) => {
@@ -97,7 +130,7 @@ export default function ContentDetail() {
     setSelectedContent(null);
   };
 
-  const canOpenManager = isYouTube || isReddit || isWhatsApp;
+  const canOpenManager = isYouTube || isReddit || isWhatsApp || isTelegram || isInstagram || isTwitter;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -165,6 +198,36 @@ export default function ContentDetail() {
           >
             <Settings className="w-4 h-4" />
             Open WhatsApp Manager
+          </button>
+        )}
+
+        {isTelegram && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open Telegram Manager
+          </button>
+        )}
+
+        {isInstagram && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open Instagram Manager
+          </button>
+        )}
+
+        {isTwitter && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open Twitter Manager
           </button>
         )}
 

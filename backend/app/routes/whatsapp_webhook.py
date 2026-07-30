@@ -1,0 +1,64 @@
+from fastapi import APIRouter, Request
+from fastapi.responses import PlainTextResponse
+from app.core.config import get_settings
+from app.connectors.registry import get_connector
+
+settings = get_settings()
+router = APIRouter()
+
+
+@router.get("/webhook/whatsapp")
+async def verify_whatsapp_webhook(
+    request: Request,
+    hub_mode: str = None,
+    hub_verify_token: str = None,
+    hub_challenge: str = None,
+):
+    """Webhook verification endpoint for WhatsApp.
+    
+    Facebook sends a GET request to verify the webhook URL.
+    We must respond with the hub_challenge value if the verify token matches.
+    """
+    if hub_mode == "subscribe" and hub_verify_token == settings.WHATSAPP_VERIFY_TOKEN:
+        return PlainTextResponse(content=hub_challenge)
+    return PlainTextResponse(status_code=403, content="Verification failed")
+
+
+@router.post("/webhook/whatsapp")
+async def receive_whatsapp_message(
+    request: Request,
+):
+    """Webhook endpoint for receiving WhatsApp messages.
+    
+    Facebook sends POST requests when messages are received.
+    We store them in the database and can notify connected clients via WebSocket.
+    """
+    body = await request.json()
+    
+    connector = get_connector("whatsapp")
+    if not connector:
+        return {"status": "error"}
+
+    # Parse the webhook payload
+    raw_body = await request.body()
+    parsed = connector.parse_webhook(raw_body)
+    
+    if parsed.get("type") == "message":
+        from_number = parsed.get("from")
+        message_text = parsed.get("text")
+        message_id = parsed.get("message_id")
+        timestamp = parsed.get("timestamp")
+
+        print(f"WhatsApp message received: {from_number}: {message_text}")
+        
+        # TODO: Store message in database
+        # TODO: Find service instance by phone_number_id
+        # TODO: Notify connected clients via WebSocket
+        
+        return {"status": "ok"}
+    
+    elif parsed.get("type") == "status":
+        print(f"WhatsApp status update: {parsed.get('status')}")
+        return {"status": "ok"}
+    
+    return {"status": "ok"}

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useMemo, useState } from "react";
 import { Tree } from "react-arborist";
 import { useStore } from "@/lib/store";
-import { FileText, MessageSquare, Video, MessageCircle, ChevronRight, RefreshCw } from "lucide-react";
+import { FileText, MessageSquare, Video, MessageCircle, ChevronRight, RefreshCw, Send, Image, Twitter, AtSign } from "lucide-react";
 
 interface TreeNode {
   id: string;
@@ -19,6 +19,9 @@ const connectorIcons: Record<string, string> = {
   youtube: "YouTube",
   reddit: "Reddit",
   whatsapp: "WhatsApp",
+  telegram: "Telegram",
+  instagram: "Instagram",
+  twitter: "Twitter",
 };
 
 const contentIcons: Record<string, any> = {
@@ -27,6 +30,10 @@ const contentIcons: Record<string, any> = {
   comment: MessageSquare,
   message: MessageCircle,
   conversation: MessageCircle,
+  tweet: Twitter,
+  mention: AtSign,
+  chat: Send,
+  media: Image,
 };
 
 function NodeRenderer({ node, style, dragHandle }: any) {

@@ -124,6 +124,40 @@ export const api = {
     getContactInfo: (orgId: string, serviceId: string, conversationId: string) =>
       request<{ contact: any }>(`/orgs/${orgId}/services/${serviceId}/whatsapp/contact/${conversationId}`),
   },
+  telegram: {
+    getChats: (orgId: string, serviceId: string) =>
+      request<{ chats: any[] }>(`/orgs/${orgId}/services/${serviceId}/telegram/chats`),
+    getMessages: (orgId: string, serviceId: string, chatId: string) =>
+      request<{ messages: any[] }>(`/orgs/${orgId}/services/${serviceId}/telegram/chat/${chatId}/messages`),
+    sendMessage: (orgId: string, serviceId: string, chatId: string, message: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/telegram/send?chat_id=${chatId}&message=${encodeURIComponent(message)}`, {
+        method: "POST",
+      }),
+  },
+  instagram: {
+    getProfile: (orgId: string, serviceId: string) =>
+      request<{ profile: any }>(`/orgs/${orgId}/services/${serviceId}/instagram/profile`),
+    getPosts: (orgId: string, serviceId: string) =>
+      request<{ posts: any[] }>(`/orgs/${orgId}/services/${serviceId}/instagram/posts`),
+    getComments: (orgId: string, serviceId: string, mediaId: string) =>
+      request<{ comments: any[] }>(`/orgs/${orgId}/services/${serviceId}/instagram/media/${mediaId}/comments`),
+    postComment: (orgId: string, serviceId: string, mediaId: string, message: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/instagram/media/${mediaId}/comment?message=${encodeURIComponent(message)}`, {
+        method: "POST",
+      }),
+  },
+  twitter: {
+    getProfile: (orgId: string, serviceId: string) =>
+      request<{ profile: any }>(`/orgs/${orgId}/services/${serviceId}/twitter/profile`),
+    getTweets: (orgId: string, serviceId: string) =>
+      request<{ tweets: any[] }>(`/orgs/${orgId}/services/${serviceId}/twitter/tweets`),
+    getMentions: (orgId: string, serviceId: string) =>
+      request<{ mentions: any[] }>(`/orgs/${orgId}/services/${serviceId}/twitter/mentions`),
+    postTweet: (orgId: string, serviceId: string, message: string, replyTo?: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/twitter/tweet?message=${encodeURIComponent(message)}${replyTo ? `&reply_to=${replyTo}` : ""}`, {
+        method: "POST",
+      }),
+  },
   billing: {
     getPlan: () => request<any>("/billing/plan"),
     getUsage: () => request<any>("/billing/usage"),

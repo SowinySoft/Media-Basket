@@ -54,6 +54,19 @@ class Settings(BaseSettings):
     WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
     WHATSAPP_ACCESS_TOKEN: str = ""
 
+    # Telegram
+    TELEGRAM_BOT_TOKEN: str = ""
+
+    # Instagram
+    INSTAGRAM_APP_ID: str = ""
+    INSTAGRAM_APP_SECRET: str = ""
+    INSTAGRAM_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/instagram"
+
+    # Twitter/X
+    TWITTER_CLIENT_ID: str = ""
+    TWITTER_CLIENT_SECRET: str = ""
+    TWITTER_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/twitter"
+
     # SaaS
     DEFAULT_ORG_NAME: str = "My Organization"
     DEFAULT_PLAN: str = "free"
