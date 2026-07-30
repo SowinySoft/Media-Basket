@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import get_settings
-from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter, facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat, bluesky
+from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter, facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat, bluesky, search, scheduler
 from app.middleware.tenant import TenantMiddleware
 
 settings = get_settings()
@@ -55,6 +55,8 @@ app.include_router(mastodon.router, prefix="/api/v1/orgs/{org_id}/services", tag
 app.include_router(pinterest.router, prefix="/api/v1/orgs/{org_id}/services", tags=["pinterest"])
 app.include_router(snapchat.router, prefix="/api/v1/orgs/{org_id}/services", tags=["snapchat"])
 app.include_router(bluesky.router, prefix="/api/v1/orgs/{org_id}/services", tags=["bluesky"])
+app.include_router(search.router, prefix="/api/v1/orgs/{org_id}", tags=["search"])
+app.include_router(scheduler.router, prefix="/api/v1/orgs/{org_id}", tags=["scheduler"])
 
 
 @app.get("/")
