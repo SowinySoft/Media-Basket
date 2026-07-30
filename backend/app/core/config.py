@@ -82,6 +82,25 @@ class Settings(BaseSettings):
     TIKTOK_CLIENT_SECRET: str = ""
     TIKTOK_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/tiktok"
 
+    # Discord
+    DISCORD_CLIENT_ID: str = ""
+    DISCORD_CLIENT_SECRET: str = ""
+    DISCORD_BOT_TOKEN: str = ""
+    DISCORD_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/discord"
+
+    # Slack
+    SLACK_CLIENT_ID: str = ""
+    SLACK_CLIENT_SECRET: str = ""
+    SLACK_BOT_TOKEN: str = ""
+    SLACK_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/slack"
+
+    # Mastodon
+    MASTODON_INSTANCE_URL: str = "https://mastodon.social"
+    MASTODON_CLIENT_ID: str = ""
+    MASTODON_CLIENT_SECRET: str = ""
+    MASTODON_ACCESS_TOKEN: str = ""
+    MASTODON_REDIRECT_URI: str = "http://localhost:8000/api/v1/services/callback/mastodon"
+
     # SaaS
     DEFAULT_ORG_NAME: str = "My Organization"
     DEFAULT_PLAN: str = "free"

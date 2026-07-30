@@ -12,6 +12,9 @@ import TwitterPanel from "./TwitterPanel";
 import FacebookPanel from "./FacebookPanel";
 import LinkedInPanel from "./LinkedInPanel";
 import TikTokPanel from "./TikTokPanel";
+import DiscordPanel from "./DiscordPanel";
+import SlackPanel from "./SlackPanel";
+import MastodonPanel from "./MastodonPanel";
 
 export default function ContentDetail() {
   const { content, selectedContentId, setSelectedContent, moderateContent, services } = useStore();
@@ -44,6 +47,9 @@ export default function ContentDetail() {
   const isFacebook = connectorType === "facebook" && (selectedItem.content_type === "post" || selectedItem.content_type === "comment");
   const isLinkedIn = connectorType === "linkedin" && (selectedItem.content_type === "post" || selectedItem.content_type === "comment");
   const isTikTok = connectorType === "tiktok" && (selectedItem.content_type === "video" || selectedItem.content_type === "comment");
+  const isDiscord = connectorType === "discord" && (selectedItem.content_type === "message" || selectedItem.content_type === "channel");
+  const isSlack = connectorType === "slack" && (selectedItem.content_type === "message" || selectedItem.content_type === "channel");
+  const isMastodon = connectorType === "mastodon" && (selectedItem.content_type === "status" || selectedItem.content_type === "notification");
 
   if (showServicePanel) {
     if (isYouTube) {
@@ -145,6 +151,33 @@ export default function ContentDetail() {
         />
       );
     }
+
+    if (isDiscord) {
+      return (
+        <DiscordPanel
+          serviceId={selectedItem.service_instance_id}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
+
+    if (isSlack) {
+      return (
+        <SlackPanel
+          serviceId={selectedItem.service_instance_id}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
+
+    if (isMastodon) {
+      return (
+        <MastodonPanel
+          serviceId={selectedItem.service_instance_id}
+          onClose={() => setShowServicePanel(false)}
+        />
+      );
+    }
   }
 
   const getSentimentColor = (sentiment?: string) => {
@@ -163,7 +196,7 @@ export default function ContentDetail() {
     setSelectedContent(null);
   };
 
-  const canOpenManager = isYouTube || isReddit || isWhatsApp || isTelegram || isInstagram || isTwitter || isFacebook || isLinkedIn || isTikTok;
+  const canOpenManager = isYouTube || isReddit || isWhatsApp || isTelegram || isInstagram || isTwitter || isFacebook || isLinkedIn || isTikTok || isDiscord || isSlack || isMastodon;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -291,6 +324,36 @@ export default function ContentDetail() {
           >
             <Settings className="w-4 h-4" />
             Open TikTok Manager
+          </button>
+        )}
+
+        {isDiscord && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open Discord Manager
+          </button>
+        )}
+
+        {isSlack && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open Slack Manager
+          </button>
+        )}
+
+        {isMastodon && (
+          <button
+            onClick={() => setShowServicePanel(true)}
+            className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Open Mastodon Manager
           </button>
         )}
 

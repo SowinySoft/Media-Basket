@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Youtube, MessageCircle, Phone, Send, Image, Twitter, Facebook, Briefcase, Video, ExternalLink, Copy, CheckCircle } from "lucide-react";
+import { Youtube, MessageCircle, Phone, Send, Image, Twitter, Facebook, Briefcase, Video, ExternalLink, Copy, CheckCircle, Gamepad2, Slack, Globe } from "lucide-react";
 
 export interface ConnectorConfig {
   type: string;
@@ -257,6 +257,90 @@ export const CONNECTOR_CONFIGS: Record<string, ConnectorConfig> = {
           "Log in with your TikTok account",
           "Authorize the application",
           "You'll be redirected back automatically",
+        ],
+      },
+    ],
+  },
+  discord: {
+    type: "discord",
+    name: "Discord",
+    icon: Gamepad2,
+    color: "text-indigo-500",
+    description: "Connect Discord to manage channels, messages, and server activity.",
+    setupUrl: "https://discord.com/developers/applications",
+    steps: [
+      {
+        id: "bot_token",
+        title: "Discord Bot Token",
+        description: "Create a bot and enter its token",
+        fields: [
+          { key: "bot_token", label: "Bot Token", type: "password", placeholder: "MTIx...", help: "Create a bot in Discord Developer Portal" },
+        ],
+        instructions: [
+          "Go to discord.com/developers/applications",
+          "Create a new application",
+          "Go to Bot > Add Bot",
+          "Copy the bot token",
+          "Enable Message Content Intent under Privileged Gateway Intents",
+        ],
+      },
+    ],
+  },
+  slack: {
+    type: "slack",
+    name: "Slack",
+    icon: Slack,
+    color: "text-green-500",
+    description: "Connect Slack to manage channels, messages, and workspace activity.",
+    setupUrl: "https://api.slack.com/apps",
+    steps: [
+      {
+        id: "bot_token",
+        title: "Slack Bot Token",
+        description: "Create a bot app and enter its token",
+        fields: [
+          { key: "bot_token", label: "Bot Token", type: "password", placeholder: "xoxb-...", help: "Create a bot in Slack API" },
+        ],
+        instructions: [
+          "Go to api.slack.com/apps",
+          "Create a new app",
+          "Go to OAuth & Permissions",
+          "Add scopes: channels:history, channels:read, chat:write",
+          "Install to workspace",
+          "Copy the Bot User OAuth Token",
+        ],
+      },
+    ],
+  },
+  mastodon: {
+    type: "mastodon",
+    name: "Mastodon",
+    icon: Globe,
+    color: "text-purple-500",
+    description: "Connect Mastodon to manage posts, notifications, and fediverse activity.",
+    setupUrl: "https://mastodon.social/settings/applications",
+    steps: [
+      {
+        id: "instance",
+        title: "Mastodon Instance",
+        description: "Enter your Mastodon instance URL",
+        fields: [
+          { key: "instance_url", label: "Instance URL", placeholder: "https://mastodon.social", help: "Your Mastodon instance URL" },
+        ],
+      },
+      {
+        id: "credentials",
+        title: "Application Credentials",
+        description: "Create an application and enter credentials",
+        fields: [
+          { key: "client_id", label: "Client ID", placeholder: "...", help: "From Settings > Development > Applications" },
+          { key: "client_secret", label: "Client Secret", type: "password", placeholder: "...", help: "From Settings > Development > Applications" },
+        ],
+        instructions: [
+          "Go to your instance Settings > Development > Applications",
+          "Create a new application",
+          "Set scopes: read, write, follow",
+          "Copy Client ID and Client Secret",
         ],
       },
     ],

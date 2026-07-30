@@ -196,6 +196,48 @@ export const api = {
         method: "POST",
       }),
   },
+  discord: {
+    getProfile: (orgId: string, serviceId: string) =>
+      request<{ profile: any }>(`/orgs/${orgId}/services/${serviceId}/discord/profile`),
+    getGuilds: (orgId: string, serviceId: string) =>
+      request<{ guilds: any[] }>(`/orgs/${orgId}/services/${serviceId}/discord/guilds`),
+    getChannels: (orgId: string, serviceId: string, guildId: string) =>
+      request<{ channels: any[] }>(`/orgs/${orgId}/services/${serviceId}/discord/guild/${guildId}/channels`),
+    getMessages: (orgId: string, serviceId: string, channelId: string) =>
+      request<{ messages: any[] }>(`/orgs/${orgId}/services/${serviceId}/discord/channel/${channelId}/messages`),
+    sendMessage: (orgId: string, serviceId: string, channelId: string, message: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/discord/channel/${channelId}/send?message=${encodeURIComponent(message)}`, {
+        method: "POST",
+      }),
+  },
+  slack: {
+    getProfile: (orgId: string, serviceId: string) =>
+      request<{ profile: any }>(`/orgs/${orgId}/services/${serviceId}/slack/profile`),
+    getChannels: (orgId: string, serviceId: string) =>
+      request<{ channels: any[] }>(`/orgs/${orgId}/services/${serviceId}/slack/channels`),
+    getMessages: (orgId: string, serviceId: string, channelId: string) =>
+      request<{ messages: any[] }>(`/orgs/${orgId}/services/${serviceId}/slack/channel/${channelId}/messages`),
+    sendMessage: (orgId: string, serviceId: string, channelId: string, message: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/slack/channel/${channelId}/send?message=${encodeURIComponent(message)}`, {
+        method: "POST",
+      }),
+  },
+  mastodon: {
+    getProfile: (orgId: string, serviceId: string) =>
+      request<{ profile: any }>(`/orgs/${orgId}/services/${serviceId}/mastodon/profile`),
+    getStatuses: (orgId: string, serviceId: string) =>
+      request<{ statuses: any[] }>(`/orgs/${orgId}/services/${serviceId}/mastodon/statuses`),
+    getNotifications: (orgId: string, serviceId: string) =>
+      request<{ notifications: any[] }>(`/orgs/${orgId}/services/${serviceId}/mastodon/notifications`),
+    postStatus: (orgId: string, serviceId: string, message: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/mastodon/status?message=${encodeURIComponent(message)}`, {
+        method: "POST",
+      }),
+    favourite: (orgId: string, serviceId: string, statusId: string) =>
+      request<any>(`/orgs/${orgId}/services/${serviceId}/mastodon/status/${statusId}/favourite`, {
+        method: "POST",
+      }),
+  },
   billing: {
     getPlan: () => request<any>("/billing/plan"),
     getUsage: () => request<any>("/billing/usage"),

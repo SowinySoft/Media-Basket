@@ -25,6 +25,9 @@ const connectorIcons: Record<string, string> = {
   facebook: "Facebook",
   linkedin: "LinkedIn",
   tiktok: "TikTok",
+  discord: "Discord",
+  slack: "Slack",
+  mastodon: "Mastodon",
 };
 
 const contentIcons: Record<string, any> = {
