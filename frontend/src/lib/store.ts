@@ -155,8 +155,20 @@ export const useStore = create<TreeState>((set, get) => ({
       const user = await res.json();
 
       const payload = JSON.parse(atob(token.split(".")[1]));
-      const org = { id: payload.org_id, name: "My Organization", slug: "my-org", plan: "free" };
 
+      // Fetch real org data
+      try {
+        const orgRes = await fetch(`${API_BASE}/orgs/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (orgRes.ok) {
+          const org = await orgRes.json();
+          set({ user, org });
+          return;
+        }
+      } catch {}
+
+      const org = { id: payload.org_id, name: "My Organization", slug: "my-org", plan: "free" };
       set({ user, org });
     } catch (err) {
       console.error("Failed to fetch user:", err);

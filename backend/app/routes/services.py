@@ -2,13 +2,31 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
-from app.models.models import ServiceInstance, Organization, Member
+from app.models.models import ServiceInstance, Organization, Member, SyncJob
 from app.schemas.schemas import ServiceCreate, ServiceResponse
 from app.routes.auth import get_current_user
 from app.tasks import sync_service_safe
 from app.celery_app import celery_app
+from pydantic import BaseModel
+from typing import Optional
+from uuid import UUID
+from datetime import datetime
 
 router = APIRouter()
+
+
+class SyncJobResponse(BaseModel):
+    id: UUID
+    service_instance_id: UUID
+    status: str
+    result: Optional[dict] = None
+    error: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 @router.get("", response_model=list[ServiceResponse])
@@ -72,8 +90,44 @@ async def trigger_sync(
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
 
+    # Create sync job record
+    sync_job = SyncJob(
+        org_id=org_id,
+        service_instance_id=service_id,
+        status="pending",
+    )
+    db.add(sync_job)
+    await db.commit()
+
     sync_service_safe(str(service_id), str(org_id))
-    return {"status": "sync_queued", "service_id": str(service_id), "celery_available": celery_app is not None}
+    return {
+        "status": "sync_queued",
+        "service_id": str(service_id),
+        "sync_job_id": str(sync_job.id),
+        "celery_available": celery_app is not None,
+    }
+
+
+@router.get("/{service_id}/sync-jobs", response_model=list[SyncJobResponse])
+async def list_sync_jobs(
+    org_id: str,
+    service_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user["org_id"] != org_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    result = await db.execute(
+        select(SyncJob)
+        .where(
+            SyncJob.org_id == org_id,
+            SyncJob.service_instance_id == service_id,
+        )
+        .order_by(SyncJob.created_at.desc())
+        .limit(20)
+    )
+    return result.scalars().all()
 
 
 @router.delete("/{service_id}", status_code=204)

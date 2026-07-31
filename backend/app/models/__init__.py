@@ -21,6 +21,8 @@ from app.models.models import (
     ScheduledPost,
     TrackingEvent,
     Suggestion,
+    VaultAuditLog,
+    SyncJob,
 )
 
 __all__ = [
@@ -46,4 +48,6 @@ __all__ = [
     "ScheduledPost",
     "TrackingEvent",
     "Suggestion",
+    "VaultAuditLog",
+    "SyncJob",
 ]

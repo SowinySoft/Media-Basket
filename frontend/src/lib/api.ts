@@ -62,9 +62,11 @@ export const api = {
         method: "DELETE",
       }),
     sync: (orgId: string, serviceId: string) =>
-      request<{ status: string; service_id: string }>(`/orgs/${orgId}/services/${serviceId}/sync`, {
+      request<{ status: string; service_id: string; sync_job_id: string }>(`/orgs/${orgId}/services/${serviceId}/sync`, {
         method: "POST",
       }),
+    getSyncJobs: (orgId: string, serviceId: string) =>
+      request<any[]>(`/orgs/${orgId}/services/${serviceId}/sync-jobs`),
     getAuthUrl: (connectorType: string, serviceId: string) =>
       request<{ auth_url: string }>(`/services/auth/${connectorType}?service_id=${serviceId}`),
   },
@@ -267,5 +269,31 @@ export const api = {
   billing: {
     getPlan: () => request<any>("/billing/plan"),
     getUsage: () => request<any>("/billing/usage"),
+  },
+  org: {
+    get: () => request<any>("/orgs/me"),
+    update: (data: { name?: string; settings?: any }) =>
+      request<any>("/orgs/me", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    delete: () => request<void>("/orgs", { method: "DELETE" }),
+  },
+  members: {
+    list: (orgId: string) => request<any[]>(`/orgs/${orgId}/members`),
+    invite: (orgId: string, data: { email: string; role: string }) =>
+      request<any>(`/orgs/${orgId}/members`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateRole: (orgId: string, memberId: string, role: string) =>
+      request<any>(`/orgs/${orgId}/members/${memberId}/role`, {
+        method: "PATCH",
+        body: JSON.stringify({ role }),
+      }),
+    remove: (orgId: string, memberId: string) =>
+      request<void>(`/orgs/${orgId}/members/${memberId}`, {
+        method: "DELETE",
+      }),
   },
 };

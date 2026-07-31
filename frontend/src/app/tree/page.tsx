@@ -9,7 +9,7 @@ import AddServiceModal from "@/components/AddServiceModal";
 import ThemeToggle from "@/components/ThemeToggle";
 import MobileNav from "@/components/MobileNav";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { Search, Plus, RefreshCw, LogOut } from "lucide-react";
+import { Search, Plus, RefreshCw, LogOut, Settings, Inbox, BarChart3, Shield } from "lucide-react";
 
 function TreePageInner() {
   const router = useRouter();
@@ -218,7 +218,25 @@ function TreePageInner() {
           )}
         </div>
 
-        <div className="p-4 border-t border-gray-700">
+        <div className="p-4 border-t border-gray-700 space-y-2">
+          <div className="flex gap-2">
+            <button
+              onClick={() => router.push("/inbox")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 text-sm"
+              title="Unified Inbox"
+            >
+              <Inbox className="w-4 h-4" />
+              <span className="hidden sm:inline">Inbox</span>
+            </button>
+            <button
+              onClick={() => router.push("/settings")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 text-sm"
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
+          </div>
           <button
             onClick={() => setShowAddService(true)}
             className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"

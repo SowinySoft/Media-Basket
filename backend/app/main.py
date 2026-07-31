@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import get_settings
-from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter, facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat, bluesky, search, scheduler, templates, export, comments, activity, bulk, calendar, tasks, approval, audit, alerts, roi, suggestions, dashboards, webhooks_builder, ab_testing, competitors
+from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter, facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat, bluesky, search, scheduler, templates, export, comments, activity, bulk, calendar, tasks, approval, audit, alerts, roi, suggestions, dashboards, webhooks_builder, ab_testing, competitors, org, members
 from app.middleware.tenant import TenantMiddleware
 from app.core.rate_limiter import RateLimitMiddleware, rate_limiter
 
@@ -40,6 +40,8 @@ app.add_middleware(
 
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(org.router, prefix="/api/v1/orgs", tags=["orgs"])
+app.include_router(members.router, prefix="/api/v1/orgs/{org_id}/members", tags=["members"])
 app.include_router(services.router, prefix="/api/v1/orgs/{org_id}/services", tags=["services"])
 app.include_router(content.router, prefix="/api/v1/orgs/{org_id}/content", tags=["content"])
 app.include_router(moderation.router, prefix="/api/v1/orgs/{org_id}/moderation", tags=["moderation"])
