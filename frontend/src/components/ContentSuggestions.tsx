@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, Check, X, RefreshCw } from "lucide-react";
+import { Sparkles, Check, X, RefreshCw, Wand2 } from "lucide-react";
 
 interface Suggestion {
   id: string;
@@ -11,6 +11,7 @@ interface Suggestion {
   connector_type: string | null;
   score: number;
   status: string;
+  source?: string;
   created_at: string;
 }
 
@@ -24,6 +25,9 @@ export default function ContentSuggestions({ orgId, onUse }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [filter, setFilter] = useState<string>("");
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [lastSource, setLastSource] = useState<string>("");
 
   useEffect(() => {
     fetchSuggestions();
@@ -45,15 +49,21 @@ export default function ContentSuggestions({ orgId, onUse }: Props) {
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (prompt?: string) => {
     setIsGenerating(true);
     try {
       const token = localStorage.getItem("access_token");
+      const params = new URLSearchParams({ count: "5" });
+      if (prompt) params.append("prompt", prompt);
       const res = await fetch(
-        `http://localhost:8000/api/v1/orgs/${orgId}/suggestions/generate?count=5`,
+        `http://localhost:8000/api/v1/orgs/${orgId}/suggestions/generate?${params}`,
         { method: "POST", headers: { Authorization: `Bearer ${token}` } }
       );
-      if (res.ok) await fetchSuggestions();
+      if (res.ok) {
+        const data = await res.json();
+        setLastSource(data.source || "templates");
+        await fetchSuggestions();
+      }
     } catch {} finally {
       setIsGenerating(false);
     }
@@ -94,6 +104,11 @@ export default function ContentSuggestions({ orgId, onUse }: Props) {
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-gray-400" />
           <span className="text-sm font-medium text-white">Content Ideas</span>
+          {lastSource && (
+            <span className="px-1.5 py-0.5 bg-gray-700 text-gray-400 text-xs rounded">
+              {lastSource}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -107,9 +122,15 @@ export default function ContentSuggestions({ orgId, onUse }: Props) {
             <option value="dismissed">Dismissed</option>
           </select>
           <button
-            onClick={handleGenerate}
+            onClick={() => setShowPrompt(!showPrompt)}
+            className="flex items-center gap-1 px-2 py-1 bg-purple-600 text-white text-xs rounded-lg hover:bg-purple-700"
+          >
+            <Wand2 className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => handleGenerate()}
             disabled={isGenerating}
-            className="flex items-center gap-1 px-2 py-1 bg-purple-600 text-white text-xs rounded-lg hover:bg-purple-700 disabled:opacity-50"
+            className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
             {isGenerating ? (
               <RefreshCw className="w-3 h-3 animate-spin" />
@@ -120,6 +141,29 @@ export default function ContentSuggestions({ orgId, onUse }: Props) {
           </button>
         </div>
       </div>
+
+      {/* Custom prompt input */}
+      {showPrompt && (
+        <div className="px-4 py-3 bg-gray-750 border-b border-gray-700">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Describe what kind of content you want..."
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              className="flex-1 px-3 py-2 bg-gray-700 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              onKeyDown={(e) => e.key === "Enter" && handleGenerate(customPrompt)}
+            />
+            <button
+              onClick={() => handleGenerate(customPrompt)}
+              disabled={isGenerating || !customPrompt}
+              className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:opacity-50"
+            >
+              Generate
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="max-h-96 overflow-y-auto">
         {isLoading ? (
@@ -141,6 +185,11 @@ export default function ContentSuggestions({ orgId, onUse }: Props) {
                       <span className={`text-xs ${getScoreColor(s.score)}`}>
                         {Math.round(s.score * 100)}%
                       </span>
+                      {s.source && (
+                        <span className="px-1 py-0.5 bg-gray-700 text-gray-400 text-[10px] rounded">
+                          {s.source}
+                        </span>
+                      )}
                       {s.status !== "pending" && (
                         <span className="px-1.5 py-0.5 bg-gray-700 text-gray-400 text-xs rounded">
                           {s.status}

@@ -115,6 +115,12 @@ class Settings(BaseSettings):
     BLUESKY_HANDLE: str = ""
     BLUESKY_APP_PASSWORD: str = ""
 
+    # AI Content Suggestions
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_MODEL: str = "claude-3-haiku-20240307"
+
     # SaaS
     DEFAULT_ORG_NAME: str = "My Organization"
     DEFAULT_PLAN: str = "free"

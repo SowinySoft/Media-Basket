@@ -1,7 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface CalendarEvent {
   id: string;
@@ -43,18 +61,83 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+function SortableEvent({ event, onSelect }: { event: CalendarEvent; onSelect: (e: CalendarEvent) => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: event.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`${CONNECTOR_COLORS[event.connector_type] || "bg-gray-600"} text-white text-[10px] px-1 py-0.5 rounded cursor-pointer truncate hover:opacity-80 flex items-center gap-0.5 group`}
+    >
+      <span
+        {...attributes}
+        {...listeners}
+        className="opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical className="w-2 h-2" />
+      </span>
+      <span onClick={() => onSelect(event)} className="flex-1 truncate">
+        {event.title}
+      </span>
+    </div>
+  );
+}
+
+function EventOverlay({ event }: { event: CalendarEvent }) {
+  return (
+    <div className={`${CONNECTOR_COLORS[event.connector_type] || "bg-gray-600"} text-white text-xs px-2 py-1 rounded shadow-lg`}>
+      {event.title}
+    </div>
+  );
+}
+
 export default function CalendarView({ orgId }: Props) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
+  const [dayEvents, setDayEvents] = useState<Record<number, CalendarEvent[]>>({});
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   useEffect(() => {
     fetchCalendar();
   }, [orgId, year, month]);
+
+  useEffect(() => {
+    // Group events by day
+    const grouped: Record<number, CalendarEvent[]> = {};
+    events.forEach((e) => {
+      const d = new Date(e.scheduled_at);
+      if (d.getFullYear() === year && d.getMonth() + 1 === month) {
+        const day = d.getDate();
+        if (!grouped[day]) grouped[day] = [];
+        grouped[day].push(e);
+      }
+    });
+    setDayEvents(grouped);
+  }, [events, year, month]);
 
   const fetchCalendar = async () => {
     setIsLoading(true);
@@ -76,19 +159,18 @@ export default function CalendarView({ orgId }: Props) {
   const getDaysInMonth = () => new Date(year, month, 0).getDate();
   const getFirstDayOfMonth = () => new Date(year, month - 1, 1).getDay();
 
-  const prevMonth = () => {
-    setCurrentDate(new Date(year, month - 2, 1));
+  const prevMonth = () => setCurrentDate(new Date(year, month - 2, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month, 1));
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const ev = events.find((e) => e.id === event.active.id);
+    setActiveEvent(ev || null);
   };
 
-  const nextMonth = () => {
-    setCurrentDate(new Date(year, month, 1));
-  };
-
-  const getEventsForDay = (day: number) => {
-    return events.filter((e) => {
-      const d = new Date(e.scheduled_at);
-      return d.getFullYear() === year && d.getMonth() + 1 === month && d.getDate() === day;
-    });
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveEvent(null);
+    // Could implement rescheduling here by updating the event's scheduled_at
+    // based on which day cell it was dropped on
   };
 
   const daysInMonth = getDaysInMonth();
@@ -117,70 +199,83 @@ export default function CalendarView({ orgId }: Props) {
       </div>
 
       {/* Calendar grid */}
-      <div className="p-4">
+      <div className="p-2 sm:p-4">
         {isLoading ? (
           <p className="text-gray-400 text-sm text-center py-8">Loading...</p>
         ) : (
-          <div className="grid grid-cols-7 gap-px bg-gray-700">
-            {/* Day headers */}
-            {DAYS.map((day) => (
-              <div key={day} className="bg-gray-800 px-2 py-1 text-center text-xs text-gray-400 font-medium">
-                {day}
-              </div>
-            ))}
-
-            {/* Calendar cells */}
-            {Array.from({ length: 42 }).map((_, i) => {
-              const day = i - firstDay + 1;
-              const isCurrentMonth = day >= 1 && day <= daysInMonth;
-              const isToday =
-                isCurrentMonth &&
-                today.getFullYear() === year &&
-                today.getMonth() + 1 === month &&
-                today.getDate() === day;
-              const dayEvents = isCurrentMonth ? getEventsForDay(day) : [];
-
-              return (
-                <div
-                  key={i}
-                  className={`bg-gray-800 min-h-[80px] p-1 ${
-                    !isCurrentMonth ? "opacity-30" : ""
-                  } ${isToday ? "ring-1 ring-blue-500" : ""}`}
-                >
-                  {isCurrentMonth && (
-                    <>
-                      <div className={`text-xs mb-1 ${isToday ? "text-blue-400 font-bold" : "text-gray-400"}`}>
-                        {day}
-                      </div>
-                      <div className="space-y-0.5">
-                        {dayEvents.slice(0, 3).map((event) => (
-                          <div
-                            key={event.id}
-                            onClick={() => setSelectedEvent(event)}
-                            className={`${
-                              CONNECTOR_COLORS[event.connector_type] || "bg-gray-600"
-                            } text-white text-[10px] px-1 py-0.5 rounded cursor-pointer truncate hover:opacity-80`}
-                          >
-                            {event.title}
-                          </div>
-                        ))}
-                        {dayEvents.length > 3 && (
-                          <div className="text-[10px] text-gray-400">+{dayEvents.length - 3} more</div>
-                        )}
-                      </div>
-                    </>
-                  )}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="grid grid-cols-7 gap-px bg-gray-700">
+              {/* Day headers */}
+              {DAYS.map((day) => (
+                <div key={day} className="bg-gray-800 px-1 sm:px-2 py-1 text-center text-xs text-gray-400 font-medium">
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden">{day.slice(0, 1)}</span>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+
+              {/* Calendar cells */}
+              {Array.from({ length: 42 }).map((_, i) => {
+                const day = i - firstDay + 1;
+                const isCurrentMonth = day >= 1 && day <= daysInMonth;
+                const isToday =
+                  isCurrentMonth &&
+                  today.getFullYear() === year &&
+                  today.getMonth() + 1 === month &&
+                  today.getDate() === day;
+                const dayEvts = isCurrentMonth ? dayEvents[day] || [] : [];
+
+                return (
+                  <div
+                    key={i}
+                    className={`bg-gray-800 min-h-[60px] sm:min-h-[80px] p-1 ${
+                      !isCurrentMonth ? "opacity-30" : ""
+                    } ${isToday ? "ring-1 ring-blue-500" : ""}`}
+                  >
+                    {isCurrentMonth && (
+                      <>
+                        <div className={`text-xs mb-1 ${isToday ? "text-blue-400 font-bold" : "text-gray-400"}`}>
+                          {day}
+                        </div>
+                        <SortableContext
+                          items={dayEvts.map((e) => e.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="space-y-0.5">
+                            {dayEvts.slice(0, 3).map((event) => (
+                              <SortableEvent
+                                key={event.id}
+                                event={event}
+                                onSelect={setSelectedEvent}
+                              />
+                            ))}
+                            {dayEvts.length > 3 && (
+                              <div className="text-[10px] text-gray-400">+{dayEvts.length - 3} more</div>
+                            )}
+                          </div>
+                        </SortableContext>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <DragOverlay>
+              {activeEvent ? <EventOverlay event={activeEvent} /> : null}
+            </DragOverlay>
+          </DndContext>
         )}
       </div>
 
       {/* Event detail modal */}
       {selectedEvent && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={() => setSelectedEvent(null)}>
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-96" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setSelectedEvent(null)}>
+          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-white mb-3">{selectedEvent.title}</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">

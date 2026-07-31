@@ -1,7 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Webhook, Plus, Trash2, Play, CheckCircle, XCircle, ExternalLink } from "lucide-react";
+import { Webhook, Plus, Trash2, Play, CheckCircle, XCircle, GripVertical, Zap, Filter, Send } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface WebhookItem {
   id: string;
@@ -10,6 +28,12 @@ interface WebhookItem {
   enabled: boolean;
   has_secret: boolean;
   created_at: string;
+}
+
+interface FlowStep {
+  id: string;
+  type: "trigger" | "filter" | "transform" | "action";
+  config: Record<string, any>;
 }
 
 interface Props {
@@ -26,6 +50,91 @@ const AVAILABLE_EVENTS = [
   "member.joined",
 ];
 
+const STEP_TYPES = {
+  trigger: { icon: Zap, color: "text-yellow-400 bg-yellow-900/30", label: "Trigger" },
+  filter: { icon: Filter, color: "text-blue-400 bg-blue-900/30", label: "Filter" },
+  transform: { icon: Send, color: "text-purple-400 bg-purple-900/30", label: "Transform" },
+  action: { icon: Send, color: "text-green-400 bg-green-900/30", label: "Action" },
+};
+
+function SortableStep({ step, onRemove, onUpdate }: { step: FlowStep; onRemove: () => void; onUpdate: (config: Record<string, any>) => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: step.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const typeInfo = STEP_TYPES[step.type];
+  const Icon = typeInfo.icon;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 p-3 rounded-lg border border-gray-700 ${typeInfo.color}`}
+    >
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+        <GripVertical className="w-4 h-4 text-gray-400" />
+      </button>
+      <Icon className="w-4 h-4" />
+      <div className="flex-1">
+        <p className="text-sm font-medium text-white">{typeInfo.label}</p>
+        {step.type === "trigger" && (
+          <select
+            value={step.config.event || ""}
+            onChange={(e) => onUpdate({ ...step.config, event: e.target.value })}
+            className="mt-1 w-full px-2 py-1 bg-gray-700 text-white text-xs rounded border border-gray-600"
+          >
+            <option value="">Select event...</option>
+            {AVAILABLE_EVENTS.map((e) => (
+              <option key={e} value={e}>{e}</option>
+            ))}
+          </select>
+        )}
+        {step.type === "filter" && (
+          <input
+            type="text"
+            placeholder="e.g., content.body contains 'important'"
+            value={step.config.condition || ""}
+            onChange={(e) => onUpdate({ ...step.config, condition: e.target.value })}
+            className="mt-1 w-full px-2 py-1 bg-gray-700 text-white text-xs rounded border border-gray-600"
+          />
+        )}
+        {step.type === "transform" && (
+          <input
+            type="text"
+            placeholder="e.g., Add prefix: [ALERT]"
+            value={step.config.template || ""}
+            onChange={(e) => onUpdate({ ...step.config, template: e.target.value })}
+            className="mt-1 w-full px-2 py-1 bg-gray-700 text-white text-xs rounded border border-gray-600"
+          />
+        )}
+        {step.type === "action" && (
+          <input
+            type="url"
+            placeholder="Webhook URL"
+            value={step.config.url || ""}
+            onChange={(e) => onUpdate({ ...step.config, url: e.target.value })}
+            className="mt-1 w-full px-2 py-1 bg-gray-700 text-white text-xs rounded border border-gray-600"
+          />
+        )}
+      </div>
+      <button onClick={onRemove} className="p-1 text-gray-400 hover:text-red-400">
+        <Trash2 className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 export default function WebhookBuilder({ orgId }: Props) {
   const [webhooks, setWebhooks] = useState<WebhookItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,6 +143,13 @@ export default function WebhookBuilder({ orgId }: Props) {
   const [newEvents, setNewEvents] = useState<string[]>([]);
   const [newSecret, setNewSecret] = useState("");
   const [testResult, setTestResult] = useState<{ id: string; ok: boolean; error?: string } | null>(null);
+  const [flowSteps, setFlowSteps] = useState<FlowStep[]>([]);
+  const [showFlowEditor, setShowFlowEditor] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   useEffect(() => {
     fetchWebhooks();
@@ -62,6 +178,7 @@ export default function WebhookBuilder({ orgId }: Props) {
           url: newUrl,
           events: newEvents,
           secret: newSecret || null,
+          flow: flowSteps.length > 0 ? flowSteps : undefined,
         }),
       });
       if (res.ok) {
@@ -69,6 +186,8 @@ export default function WebhookBuilder({ orgId }: Props) {
         setNewUrl("");
         setNewEvents([]);
         setNewSecret("");
+        setFlowSteps([]);
+        setShowFlowEditor(false);
         await fetchWebhooks();
       }
     } catch {}
@@ -117,6 +236,32 @@ export default function WebhookBuilder({ orgId }: Props) {
     setNewEvents((prev) =>
       prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event]
     );
+  };
+
+  const addStep = (type: FlowStep["type"]) => {
+    setFlowSteps([
+      ...flowSteps,
+      { id: `step-${Date.now()}`, type, config: {} },
+    ]);
+  };
+
+  const removeStep = (id: string) => {
+    setFlowSteps(flowSteps.filter((s) => s.id !== id));
+  };
+
+  const updateStep = (id: string, config: Record<string, any>) => {
+    setFlowSteps(flowSteps.map((s) => s.id === id ? { ...s, config } : s));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setFlowSteps((items) => {
+        const oldIndex = items.findIndex((i) => i.id === active.id);
+        const newIndex = items.findIndex((i) => i.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   return (
@@ -169,11 +314,87 @@ export default function WebhookBuilder({ orgId }: Props) {
             onChange={(e) => setNewSecret(e.target.value)}
             className="w-full px-3 py-2 bg-gray-700 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+
+          {/* Flow Editor Toggle */}
+          <button
+            onClick={() => setShowFlowEditor(!showFlowEditor)}
+            className="text-blue-400 text-xs hover:underline flex items-center gap-1"
+          >
+            <Zap className="w-3 h-3" />
+            {showFlowEditor ? "Hide Flow Editor" : "Add Flow Logic"}
+          </button>
+
+          {/* Visual Flow Editor */}
+          {showFlowEditor && (
+            <div className="border border-gray-600 rounded-lg p-3 space-y-3">
+              <p className="text-xs text-gray-400">Drag steps to reorder. Add filters, transforms, or actions.</p>
+
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={flowSteps.map((s) => s.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {flowSteps.map((step) => (
+                      <SortableStep
+                        key={step.id}
+                        step={step}
+                        onRemove={() => removeStep(step.id)}
+                        onUpdate={(config) => updateStep(step.id, config)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+
+              {flowSteps.length === 0 && (
+                <p className="text-center text-gray-500 text-xs py-4">No steps added yet</p>
+              )}
+
+              {/* Add step buttons */}
+              <div className="flex flex-wrap gap-2">
+                {(["trigger", "filter", "transform", "action"] as const).map((type) => {
+                  const info = STEP_TYPES[type];
+                  const Icon = info.icon;
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => addStep(type)}
+                      className="flex items-center gap-1 px-2 py-1 bg-gray-700 text-white text-xs rounded hover:bg-gray-600"
+                    >
+                      <Icon className="w-3 h-3" />
+                      {info.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Flow preview */}
+              {flowSteps.length > 0 && (
+                <div className="mt-3 p-2 bg-gray-800 rounded text-xs text-gray-400">
+                  <p className="font-medium text-white mb-1">Flow Preview:</p>
+                  {flowSteps.map((step, i) => (
+                    <span key={step.id}>
+                      {STEP_TYPES[step.type].label}
+                      {step.config.event && ` (${step.config.event})`}
+                      {step.config.condition && ` [${step.config.condition}]`}
+                      {i < flowSteps.length - 1 && " → "}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-2">
             <button onClick={handleCreate} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
               Create
             </button>
-            <button onClick={() => setShowCreate(false)} className="px-4 py-2 bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-600">
+            <button onClick={() => { setShowCreate(false); setFlowSteps([]); }} className="px-4 py-2 bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-600">
               Cancel
             </button>
           </div>
