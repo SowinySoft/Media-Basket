@@ -416,4 +416,17 @@ export const api = {
     getHealth: () => request<any>("/admin/health"),
     getUsers: () => request<any[]>("/admin/users"),
   },
+  marketplace: {
+    listCatalog: (params?: { category?: string; search?: string; tier?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.category) q.set("category", params.category);
+      if (params?.search) q.set("search", params.search);
+      if (params?.tier) q.set("tier", params.tier);
+      const qs = q.toString();
+      return request<any[]>(`/marketplace/catalog${qs ? `?${qs}` : ""}`);
+    },
+    getPlugin: (name: string) => request<any>(`/marketplace/catalog/${name}`),
+    getCategories: () => request<{ name: string; count: number }[]>("/marketplace/categories"),
+    install: (name: string) => request<any>(`/marketplace/install/${name}`, { method: "POST" }),
+  },
 };

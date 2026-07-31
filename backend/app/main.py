@@ -19,7 +19,7 @@ from app.routes import (
     bluesky, search, scheduler, templates, export, comments, activity, bulk,
     calendar, tasks, approval, audit, alerts, roi, suggestions, dashboards,
     webhooks_builder, ab_testing, competitors, org, members, plugins,
-    inbox, data_retention, alerting, pgaudit, admin,
+    inbox, data_retention, alerting, pgaudit, admin, marketplace,
 )
 from app.middleware.tenant import TenantMiddleware
 from app.middleware.csrf import CSRFMiddleware, SecurityHeadersMiddleware
@@ -209,6 +209,7 @@ app.include_router(data_retention.router, prefix="/api/v1/orgs/{org_id}/retentio
 app.include_router(alerting.router, prefix="/api/v1/orgs/{org_id}/alerting", tags=["alerting"])
 app.include_router(pgaudit.router, prefix="/api/v1/orgs/{org_id}/audit", tags=["pgaudit"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
+app.include_router(marketplace.router, prefix="/api/v1/marketplace", tags=["marketplace"])
 
 
 @app.get("/")

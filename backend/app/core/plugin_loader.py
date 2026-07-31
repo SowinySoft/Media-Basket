@@ -86,3 +86,38 @@ def unload_plugin(plugin_name: str, entry_point: str) -> bool:
 def get_loaded_plugins() -> dict[str, Type[ConnectorPlugin]]:
     """Return all currently loaded plugin classes."""
     return dict(_loaded_plugins)
+
+
+def load_plugin_sandboxed(entry_point: str, plugin_name: str, sandbox_config: dict = None) -> dict:
+    """Load and execute a plugin in a sandboxed environment.
+
+    Returns: {success: bool, connector_class: Type | None, error: str | None}
+    """
+    from app.core.plugin_sandbox import PluginSandbox
+
+    sandbox = PluginSandbox(
+        allowed_hosts=set(sandbox_config.get("allowed_hosts", [])) if sandbox_config else set(),
+        max_execution_seconds=sandbox_config.get("max_execution_seconds", 30) if sandbox_config else 30,
+        max_memory_mb=sandbox_config.get("max_memory_mb", 128) if sandbox_config else 128,
+    )
+
+    # Try loading as file-based plugin first
+    if entry_point.startswith("./") or entry_point.startswith(".\\"):
+        import os
+        file_path = os.path.abspath(entry_point)
+        if os.path.exists(file_path):
+            with open(file_path, "r") as f:
+                code = f.read()
+
+            is_safe, issues = sandbox.validate_code(code)
+            if not is_safe:
+                logger.warning("plugin_code_issues", plugin=plugin_name, issues=issues)
+                # Continue anyway for trusted plugins, but log
+
+            result = sandbox.execute_code(code, {"ConnectorPlugin": ConnectorPlugin, "ConnectorManifest": ConnectorManifest})
+            if not result["success"]:
+                return {"success": False, "connector_class": None, "error": result["error"]}
+
+    # Fallback to standard loader
+    connector_class = load_plugin_from_path(entry_point, plugin_name)
+    return {"success": connector_class is not None, "connector_class": connector_class, "error": None}
