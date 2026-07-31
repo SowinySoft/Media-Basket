@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
 from app.core.vault import store_secret
-from app.models.models import ServiceInstance, CredentialVault
+from app.models.models import ServiceInstance
 from app.routes.auth import get_current_user
 from app.connectors.registry import get_connector
 from app.core.logging import get_logger
@@ -58,21 +58,6 @@ async def oauth_callback(
         raise HTTPException(status_code=500, detail=f"Token exchange failed: {str(e)}")
 
     store_secret(db, org_id, service_id, token_data)
-
-    existing = await db.execute(
-        select(CredentialVault).where(CredentialVault.service_instance_id == service_id)
-    )
-    credential = existing.scalar_one_or_none()
-
-    if credential:
-        credential.vault_path = f"media_basket/{org_id}/{service_id}"
-    else:
-        credential = CredentialVault(
-            org_id=org_id,
-            service_instance_id=service_id,
-            vault_path=f"media_basket/{org_id}/{service_id}",
-        )
-        db.add(credential)
 
     await db.commit()
 

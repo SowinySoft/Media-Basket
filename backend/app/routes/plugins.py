@@ -49,7 +49,7 @@ class PluginResponse(BaseModel):
     tier: str
     entry_point: str
     capabilities: dict
-    auth: dict
+    auth_config: dict
     enabled: bool
     config: dict
     error: Optional[str] = None

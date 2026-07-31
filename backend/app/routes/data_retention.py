@@ -1,7 +1,7 @@
 """Data retention — Gap 20: automatic cleanup of old content/audit/activity."""
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, func, text
+from sqlalchemy import delete, func, select, text
 from app.core.database import get_db
 from app.models.models import ContentItem, AuditLog, ActivityLog, Notification, SyncJob
 from app.core.metrics import data_retention_deleted_total

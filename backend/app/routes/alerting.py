@@ -8,7 +8,7 @@ from app.routes.auth import get_current_user
 from app.core.logging import get_logger
 from pydantic import BaseModel
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter()
 logger = get_logger("alerting")
@@ -40,6 +40,24 @@ class AlertRuleResponse(BaseModel):
         from_attributes = True
 
 
+def _alert_to_response(alert: Alert) -> dict:
+    """Map Alert model columns to response shape."""
+    cfg = alert.config or {}
+    return {
+        "id": alert.id,
+        "org_id": alert.org_id,
+        "name": alert.name,
+        "alert_type": alert.type,
+        "threshold": cfg.get("threshold", 0.0),
+        "connector_type": cfg.get("connector_type"),
+        "enabled": alert.enabled,
+        "config": cfg,
+        "triggered": alert.last_triggered_at is not None,
+        "triggered_at": alert.last_triggered_at,
+        "created_at": alert.created_at,
+    }
+
+
 @router.get("/rules", response_model=list[AlertRuleResponse])
 async def list_alert_rules(
     org_id: str,
@@ -52,7 +70,7 @@ async def list_alert_rules(
     result = await db.execute(
         select(Alert).where(Alert.org_id == org_id).order_by(Alert.created_at.desc())
     )
-    return result.scalars().all()
+    return [_alert_to_response(a) for a in result.scalars().all()]
 
 
 @router.post("/rules", response_model=AlertRuleResponse, status_code=201)
@@ -67,20 +85,21 @@ async def create_alert_rule(
     if current_user["role"] not in ("owner", "admin"):
         raise HTTPException(status_code=403, detail="Admin role required")
 
+    cfg = {**data.config, "threshold": data.threshold}
+    if data.connector_type:
+        cfg["connector_type"] = data.connector_type
+
     alert = Alert(
         org_id=org_id,
         name=data.name,
-        alert_type=data.alert_type,
-        threshold=data.threshold,
-        connector_type=data.connector_type,
+        type=data.alert_type,
+        config=cfg,
         enabled=data.enabled,
-        config=data.config,
-        triggered=False,
     )
     db.add(alert)
     await db.flush()
     await db.refresh(alert)
-    return alert
+    return _alert_to_response(alert)
 
 
 @router.put("/rules/{rule_id}", response_model=AlertRuleResponse)
@@ -102,13 +121,14 @@ async def update_alert_rule(
         raise HTTPException(status_code=404, detail="Alert rule not found")
 
     alert.name = data.name
-    alert.alert_type = data.alert_type
-    alert.threshold = data.threshold
-    alert.connector_type = data.connector_type
+    alert.type = data.alert_type
     alert.enabled = data.enabled
-    alert.config = data.config
+    cfg = {**alert.config, **data.config, "threshold": data.threshold}
+    if data.connector_type:
+        cfg["connector_type"] = data.connector_type
+    alert.config = cfg
     await db.flush()
-    return alert
+    return _alert_to_response(alert)
 
 
 @router.delete("/rules/{rule_id}", status_code=204)
@@ -151,35 +171,34 @@ async def evaluate_alerts(
 
     triggered_count = 0
     for alert in alerts:
-        # Simple threshold-based evaluation (extend per alert_type)
+        threshold = (alert.config or {}).get("threshold", 0.0)
         should_trigger = False
-        if alert.alert_type == "credential_expiry":
-            # Check credential expiry
+
+        if alert.type == "credential_expiry":
             from app.models.models import CredentialVault
             cv = await db.execute(
                 select(CredentialVault).where(CredentialVault.org_id == org_id)
             )
             for cred in cv.scalars().all():
-                from datetime import datetime, timezone
                 if cred.rotated_at:
                     days_old = (datetime.now(timezone.utc) - cred.rotated_at).days
-                    if days_old > alert.threshold:
+                    if days_old > threshold:
                         should_trigger = True
                         break
 
-        if should_trigger and not alert.triggered:
-            alert.triggered = True
-            alert.triggered_at = datetime.now(timezone.utc)
+        was_triggered = alert.last_triggered_at is not None
+
+        if should_trigger and not was_triggered:
+            alert.last_triggered_at = datetime.now(timezone.utc)
             triggered_count += 1
-            await notify_alert_triggered(org_id, str(alert.id), alert.alert_type, alert.name)
+            await notify_alert_triggered(org_id, str(alert.id), alert.type, alert.name)
             await create_notification(
                 db, org_id, "alert.triggered", alert.name,
-                body=f"Alert '{alert.name}' triggered ({alert.alert_type})",
-                metadata={"alert_id": str(alert.id), "alert_type": alert.alert_type},
+                body=f"Alert '{alert.name}' triggered ({alert.type})",
+                metadata={"alert_id": str(alert.id), "alert_type": alert.type},
             )
-        elif not should_trigger and alert.triggered:
-            alert.triggered = False
-            alert.triggered_at = None
+        elif not should_trigger and was_triggered:
+            alert.last_triggered_at = None
 
     await db.flush()
     return {"evaluated": len(alerts), "triggered": triggered_count}

@@ -37,6 +37,7 @@ class UserResponse(BaseModel):
     name: str
     avatar_url: Optional[str] = None
     auth_provider: str
+    settings: dict = {}
     created_at: datetime
 
     class Config:
@@ -61,6 +62,7 @@ class MemberResponse(BaseModel):
     org_id: UUID
     user_id: UUID
     role: str
+    service_permissions: dict = {}
     joined_at: datetime
 
     class Config:

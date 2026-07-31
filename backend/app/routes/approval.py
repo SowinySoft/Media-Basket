@@ -9,7 +9,7 @@ from datetime import datetime
 from app.routes.auth import get_current_user
 from app.core.database import get_db
 from sqlalchemy import select
-from app.models.models import ContentItem, ContentMetadata, ModerationAction, Member
+from app.models.models import ContentItem, ContentMetadata, ModerationAction, Member, User
 from app.core.logging import get_logger
 
 
@@ -41,7 +41,18 @@ async def get_approval_status(
         raise HTTPException(status_code=404, detail="Content not found")
 
     item, meta = row
-    approval = (meta or {}).get("approval_status") if meta else None
+    # Derive approval status from latest ModerationAction
+    latest_result = await db.execute(
+        select(ModerationAction)
+        .where(
+            ModerationAction.content_item_id == content_item_id,
+            ModerationAction.org_id == org_id,
+        )
+        .order_by(ModerationAction.performed_at.desc())
+        .limit(1)
+    )
+    latest_action = latest_result.scalar_one_or_none()
+    approval = latest_action.action if latest_action else "draft"
 
     # Get approval history
     history_result = await db.execute(
@@ -90,15 +101,6 @@ async def submit_for_approval(
         raise HTTPException(status_code=404, detail="Content not found")
 
     item, meta = row
-    if meta:
-        meta.approval_status = "pending"
-    else:
-        meta = ContentMetadata(
-            org_id=org_id,
-            content_item_id=content_item_id,
-            approval_status="pending",
-        )
-        db.add(meta)
 
     # Log action
     action_log = ModerationAction(
@@ -142,16 +144,6 @@ async def approval_action(
     }
     new_status = status_map.get(req.action, req.action)
 
-    if meta:
-        meta.approval_status = new_status
-    else:
-        meta = ContentMetadata(
-            org_id=org_id,
-            content_item_id=content_item_id,
-            approval_status=new_status,
-        )
-        db.add(meta)
-
     # Log action
     action_log = ModerationAction(
         org_id=org_id,
@@ -174,22 +166,25 @@ async def list_pending_approvals(
 ):
     org_id = current_user["org_id"]
     result = await db.execute(
-        select(ContentItem, ContentMetadata)
-        .join(ContentMetadata, ContentItem.id == ContentMetadata.content_item_id)
+        select(ContentItem, ModerationAction)
+        .join(ModerationAction, ContentItem.id == ModerationAction.content_item_id)
         .where(
             ContentItem.org_id == org_id,
-            ContentMetadata.approval_status == "pending",
+            ModerationAction.action == "submit_for_approval",
         )
         .order_by(ContentItem.ingested_at.desc())
     )
-    rows = result.all()
+    rows = result.unique().all()
 
-    return [
-        {
-            "id": str(item.id),
-            "content_type": item.content_type,
-            "payload": item.payload,
-            "ingested_at": item.ingested_at.isoformat() if item.ingested_at else None,
-        }
-        for item, _ in rows
-    ]
+    seen = set()
+    items = []
+    for item, action in rows:
+        if item.id not in seen:
+            seen.add(item.id)
+            items.append({
+                "id": str(item.id),
+                "content_type": item.content_type,
+                "payload": item.payload,
+                "ingested_at": item.ingested_at.isoformat() if item.ingested_at else None,
+            })
+    return items

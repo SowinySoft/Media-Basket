@@ -63,7 +63,7 @@ async def export_csv(
     # Data
     for item, conn_type in items:
         payload = item.payload or {}
-        metadata = item.metadata_ or {}
+        metadata = (item.metadata_record.__dict__ if item.metadata_record else {})
         
         writer.writerow([
             str(item.id),
@@ -131,7 +131,7 @@ async def export_json(
             "content_type": item.content_type,
             "connector_type": conn_type,
             "payload": item.payload,
-            "metadata": item.metadata_,
+            "metadata": item.metadata_record.__dict__ if item.metadata_record else {},
             "ingested_at": item.ingested_at.isoformat() if item.ingested_at else None,
         })
     

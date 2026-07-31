@@ -25,7 +25,7 @@ def upgrade() -> None:
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("body", sa.Text, nullable=True),
         sa.Column("link", sa.String(500), nullable=True),
-        sa.Column("sa.Column", sa.Boolean, nullable=False, server_default="false"),
+        sa.Column("read", sa.Boolean, nullable=False, server_default="false"),
         sa.Column("metadata", postgresql.JSONB, nullable=False, server_default="{}"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )

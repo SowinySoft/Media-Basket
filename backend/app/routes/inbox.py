@@ -20,7 +20,7 @@ class NotificationResponse(BaseModel):
     title: str
     body: str | None = None
     link: str | None = None
-    read: bool
+    is_read: bool
     metadata_json: dict = {}
     created_at: datetime
 
@@ -60,12 +60,12 @@ async def list_notifications(
         q = q.where(Notification.type == type)
         count_q = count_q.where(Notification.type == type)
     if unread_only:
-        q = q.where(Notification.read == False)
-        count_q = count_q.where(Notification.read == False)
+        q = q.where(Notification.is_read == False)
+        count_q = count_q.where(Notification.is_read == False)
 
     total = (await db.execute(count_q)).scalar() or 0
     unread = (await db.execute(
-        select(func.count(Notification.id)).where(Notification.org_id == org_id, Notification.read == False)
+        select(func.count(Notification.id)).where(Notification.org_id == org_id, Notification.is_read == False)
     )).scalar() or 0
 
     result = await db.execute(
@@ -89,7 +89,7 @@ async def notification_stats(
         select(func.count(Notification.id)).where(Notification.org_id == org_id)
     )).scalar() or 0
     unread = (await db.execute(
-        select(func.count(Notification.id)).where(Notification.org_id == org_id, Notification.read == False)
+        select(func.count(Notification.id)).where(Notification.org_id == org_id, Notification.is_read == False)
     )).scalar() or 0
 
     rows = (await db.execute(
@@ -119,7 +119,7 @@ async def mark_read(
     if not n:
         raise HTTPException(status_code=404, detail="Notification not found")
 
-    n.read = True
+    n.is_read = True
     await db.flush()
     return {"status": "ok"}
 
@@ -135,8 +135,8 @@ async def mark_all_read(
 
     await db.execute(
         update(Notification)
-        .where(Notification.org_id == org_id, Notification.read == False)
-        .values(read=True)
+        .where(Notification.org_id == org_id, Notification.is_read == False)
+        .values(is_read=True)
     )
     await db.flush()
     return {"status": "ok"}
