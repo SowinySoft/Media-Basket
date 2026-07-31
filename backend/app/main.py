@@ -1,6 +1,9 @@
 """FastAPI application entry point."""
+import uuid
+import time
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from app.core.config import get_settings
 from app.core.logging import setup_logging, get_logger
@@ -21,7 +24,6 @@ from app.routes import (
 from app.middleware.tenant import TenantMiddleware
 from app.middleware.csrf import CSRFMiddleware, SecurityHeadersMiddleware
 from app.core.rate_limiter import RateLimitMiddleware, rate_limiter
-import time
 
 settings = get_settings()
 
@@ -44,6 +46,41 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+
+# --- Global exception handler ---
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.error(
+        "unhandled_exception",
+        request_id=request_id,
+        path=request.url.path,
+        method=request.method,
+        error type=type(exc).__name__,
+        error=str(exc),
+        exc_info=True,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "request_id": request_id,
+        },
+    )
+
+
+@app.exception_handler(ValueError)
+async def validation_error_handler(request: Request, exc: ValueError):
+    request_id = getattr(request.state, "request_id", "unknown")
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": str(exc),
+            "request_id": request_id,
+        },
+    )
+
 
 # --- OpenTelemetry Tracing ---
 try:
@@ -69,13 +106,21 @@ app.add_middleware(
 )
 
 
-# --- Request metrics + structlog middleware ---
+# --- Request ID + metrics + structlog middleware ---
 @app.middleware("http")
-async def metrics_middleware(request: Request, call_next):
+async def request_middleware(request: Request, call_next):
+    # Generate correlation ID
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())[:16]
+    request.state.request_id = request_id
+
     start = time.perf_counter()
     response = await call_next(request)
     duration = time.perf_counter() - start
 
+    # Attach request ID to response
+    response.headers["X-Request-ID"] = request_id
+
+    # Normalize path for metrics (avoid high-cardinality labels)
     path = request.url.path
     if "/orgs/" in path:
         parts = path.split("/")
@@ -98,6 +143,7 @@ async def metrics_middleware(request: Request, call_next):
 
     logger.info(
         "http_request",
+        request_id=request_id,
         method=request.method,
         path=path,
         status=response.status_code,

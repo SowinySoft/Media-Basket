@@ -12,6 +12,7 @@ Stages:
 7. emit     — broadcast WebSocket notification
 8. alert    — check sentiment thresholds, trigger alerts if needed
 """
+import asyncio
 import hashlib
 import json
 from datetime import datetime, timezone
@@ -155,7 +156,7 @@ class ContentIngestionPipeline:
 
     # ── Stage 5: Enrich ────────────────────────────────────────────
     async def enrich(self, content: UnifiedContent) -> UnifiedContent:
-        """Enrich with ML analysis (sentiment, spam, tags)."""
+        """Enrich with ML analysis (sentiment, spam, tags). Gracefully degrades if ML is unavailable."""
         try:
             from app.ml.analyzer import analyze_text
             if content.body:
@@ -168,7 +169,9 @@ class ContentIngestionPipeline:
                 content.flagged = analysis.get("flagged", False)
                 content.flag_reasons = analysis.get("flag_reasons", [])
         except ImportError:
-            pass
+            logger.debug("ml_unavailable_import", external_id=content.external_id)
+        except Exception as exc:
+            logger.warning("ml_enrichment_failed", external_id=content.external_id, error=str(exc))
         return content
 
     # ── Stage 6: Persist ───────────────────────────────────────────
@@ -241,18 +244,47 @@ class ContentIngestionPipeline:
                 except Exception:
                     pass
 
-    # ── Full pipeline run ──────────────────────────────────────────
-    async def run(self, service_id: str, connector_type: str, raw_content: list[dict]) -> list[str]:
-        """Execute the full 8-stage pipeline."""
-        raw = await self.trigger(service_id, connector_type, raw_content)
-        raw = await self.validate(raw)
-        items = await self.map_content(service_id, connector_type, raw)
-        items = [await self.enrich(i) for i in items]
-        items = await self.dedup(items)
-        created_ids = await self.persist(items)
-        await self.emit(created_ids, connector_type)
-        await self.alert(items, created_ids)
-        return created_ids
+    # ── Full pipeline run with retry ────────────────────────────────
+    async def run(
+        self,
+        service_id: str,
+        connector_type: str,
+        raw_content: list[dict],
+        max_retries: int = 3,
+    ) -> list[str]:
+        """Execute the full 8-stage pipeline with exponential backoff retry."""
+        last_error = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                raw = await self.trigger(service_id, connector_type, raw_content)
+                raw = await self.validate(raw)
+                items = await self.map_content(service_id, connector_type, raw)
+                items = [await self.enrich(i) for i in items]
+                items = await self.dedup(items)
+                created_ids = await self.persist(items)
+                await self.emit(created_ids, connector_type)
+                await self.alert(items, created_ids)
+                return created_ids
+            except Exception as exc:
+                last_error = exc
+                if attempt < max_retries:
+                    wait = 2 ** attempt  # exponential backoff: 2s, 4s, 8s
+                    logger.warning(
+                        "pipeline_retry",
+                        attempt=attempt,
+                        max_retries=max_retries,
+                        wait_seconds=wait,
+                        error=str(exc),
+                    )
+                    await asyncio.sleep(wait)
+                else:
+                    logger.error(
+                        "pipeline_failed",
+                        attempts=attempt,
+                        error=str(exc),
+                        exc_info=True,
+                    )
+        raise last_error
 
     # ── Helpers ─────────────────────────────────────────────────────
     def _compute_hash(self, item: UnifiedContent) -> str:

@@ -3,7 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from app.core.database import get_db
 from app.core.config import get_settings
+from app.core.logging import get_logger
 
+
+logger = get_logger("health")
 router = APIRouter()
 settings = get_settings()
 

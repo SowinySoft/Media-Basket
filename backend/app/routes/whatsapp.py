@@ -8,6 +8,10 @@ from app.core.vault import read_secret, store_secret
 from app.models.models import ServiceInstance, ContentItem
 from app.routes.auth import get_current_user
 from app.connectors.registry import get_connector
+from app.core.logging import get_logger
+
+
+logger = get_logger("whatsapp")
 
 settings = get_settings()
 router = APIRouter()
@@ -93,7 +97,7 @@ async def get_conversation_messages(
     if not connector:
         raise HTTPException(status_code=404, detail="WhatsApp connector not found")
 
-    credentials = read_secret(org_id, service_id)
+    credentials = await read_secret(db, org_id, service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials")
 
@@ -135,7 +139,7 @@ async def moderate_message(
     if not connector:
         raise HTTPException(status_code=404, detail="WhatsApp connector not found")
 
-    credentials = read_secret(org_id, service_id)
+    credentials = await read_secret(db, org_id, service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials")
 
@@ -161,7 +165,7 @@ async def reply_to_conversation(
     if not connector:
         raise HTTPException(status_code=404, detail="WhatsApp connector not found")
 
-    credentials = read_secret(org_id, service_id)
+    credentials = await read_secret(db, org_id, service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials")
 
@@ -186,7 +190,7 @@ async def get_contact_info(
     if not connector:
         raise HTTPException(status_code=404, detail="WhatsApp connector not found")
 
-    credentials = read_secret(org_id, service_id)
+    credentials = await read_secret(db, org_id, service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials")
 

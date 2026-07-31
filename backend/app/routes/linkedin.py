@@ -4,6 +4,10 @@ from app.core.database import get_db
 from app.core.vault import read_secret
 from app.routes.auth import get_current_user
 from app.connectors.registry import get_connector
+from app.core.logging import get_logger
+
+
+logger = get_logger("linkedin")
 
 router = APIRouter()
 
@@ -12,13 +16,14 @@ router = APIRouter()
 async def get_linkedin_profile(
     service_id: str,
     current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     org_id = current_user["org_id"]
     connector = get_connector("linkedin")
     if not connector:
         raise HTTPException(status_code=404, detail="LinkedIn connector not found")
 
-    credentials = read_secret(org_id, service_id)
+    credentials = await read_secret(db, org_id, service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials")
 
@@ -30,13 +35,14 @@ async def get_linkedin_profile(
 async def get_linkedin_posts(
     service_id: str,
     current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     org_id = current_user["org_id"]
     connector = get_connector("linkedin")
     if not connector:
         raise HTTPException(status_code=404, detail="LinkedIn connector not found")
 
-    credentials = read_secret(org_id, service_id)
+    credentials = await read_secret(db, org_id, service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials")
 
@@ -54,13 +60,14 @@ async def get_linkedin_comments(
     service_id: str,
     post_urn: str,
     current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     org_id = current_user["org_id"]
     connector = get_connector("linkedin")
     if not connector:
         raise HTTPException(status_code=404, detail="LinkedIn connector not found")
 
-    credentials = read_secret(org_id, service_id)
+    credentials = await read_secret(db, org_id, service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials")
 
@@ -79,13 +86,14 @@ async def comment_on_linkedin(
     post_urn: str,
     message: str,
     current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     org_id = current_user["org_id"]
     connector = get_connector("linkedin")
     if not connector:
         raise HTTPException(status_code=404, detail="LinkedIn connector not found")
 
-    credentials = read_secret(org_id, service_id)
+    credentials = await read_secret(db, org_id, service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials")
 

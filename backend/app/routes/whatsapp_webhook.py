@@ -2,6 +2,10 @@ from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse
 from app.core.config import get_settings
 from app.connectors.registry import get_connector
+from app.core.logging import get_logger
+
+
+logger = get_logger("whatsapp_webhook")
 
 settings = get_settings()
 router = APIRouter()

@@ -7,7 +7,10 @@ from app.models.models import Organization, User, Member, ServiceInstance, Conte
 from app.routes.auth import get_current_user
 from pydantic import BaseModel
 from datetime import datetime
+from app.core.logging import get_logger
 
+
+logger = get_logger("admin")
 router = APIRouter()
 
 
@@ -98,6 +101,7 @@ async def system_health(
     try:
         import redis.asyncio as aioredis
         from app.core.config import get_settings
+
         settings = get_settings()
         if settings.REDIS_URL:
             r = aioredis.from_url(settings.REDIS_URL)

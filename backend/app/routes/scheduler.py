@@ -10,7 +10,10 @@ from app.routes.auth import get_current_user
 from app.core.scheduler import ContentScheduler, ScheduledPost, ScheduleStatus
 from app.core.api_response import success_response, error_response, paginated_response
 from app.core.database import get_db
+from app.core.logging import get_logger
 
+
+logger = get_logger("scheduler")
 router = APIRouter()
 
 
@@ -120,6 +123,7 @@ async def publish_directly(
     from app.connectors.registry import get_connector
     from app.core.vault import read_secret
     
+
     org_id = current_user["org_id"]
     
     # Get connector and credentials
@@ -127,7 +131,7 @@ async def publish_directly(
     if not connector:
         raise HTTPException(status_code=404, detail=f"Connector not found: {request.connector_type}")
     
-    credentials = read_secret(org_id, request.service_id)
+    credentials = await read_secret(db, org_id, request.service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials found")
     

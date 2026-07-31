@@ -6,6 +6,10 @@ from app.core.vault import read_secret, store_secret
 from app.models.models import ServiceInstance, ContentItem
 from app.routes.auth import get_current_user
 from app.connectors.registry import get_connector
+from app.core.logging import get_logger
+
+
+logger = get_logger("reddit")
 
 router = APIRouter()
 
@@ -22,7 +26,7 @@ async def get_post_comments(
     if not connector:
         raise HTTPException(status_code=404, detail="Reddit connector not found")
 
-    credentials = read_secret(org_id, service_id)
+    credentials = await read_secret(db, org_id, service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials")
 
@@ -31,7 +35,7 @@ async def get_post_comments(
             new_tokens = await connector.refresh_token(credentials["refresh_token"])
             if "access_token" in new_tokens:
                 credentials = {**credentials, **new_tokens}
-                store_secret(org_id, service_id, credentials)
+                await store_secret(db, org_id, service_id, credentials)
         except Exception:
             pass
 
@@ -71,7 +75,7 @@ async def moderate_comment(
     if not connector:
         raise HTTPException(status_code=404, detail="Reddit connector not found")
 
-    credentials = read_secret(org_id, service_id)
+    credentials = await read_secret(db, org_id, service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials")
 
@@ -80,7 +84,7 @@ async def moderate_comment(
             new_tokens = await connector.refresh_token(credentials["refresh_token"])
             if "access_token" in new_tokens:
                 credentials = {**credentials, **new_tokens}
-                store_secret(org_id, service_id, credentials)
+                await store_secret(db, org_id, service_id, credentials)
         except Exception:
             pass
 
@@ -102,7 +106,7 @@ async def reply_to_comment(
     if not connector:
         raise HTTPException(status_code=404, detail="Reddit connector not found")
 
-    credentials = read_secret(org_id, service_id)
+    credentials = await read_secret(db, org_id, service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials")
 
@@ -111,7 +115,7 @@ async def reply_to_comment(
             new_tokens = await connector.refresh_token(credentials["refresh_token"])
             if "access_token" in new_tokens:
                 credentials = {**credentials, **new_tokens}
-                store_secret(org_id, service_id, credentials)
+                await store_secret(db, org_id, service_id, credentials)
         except Exception:
             pass
 
@@ -131,7 +135,7 @@ async def get_subreddit_info(
     if not connector:
         raise HTTPException(status_code=404, detail="Reddit connector not found")
 
-    credentials = read_secret(org_id, service_id)
+    credentials = await read_secret(db, org_id, service_id)
     if not credentials:
         raise HTTPException(status_code=400, detail="No credentials")
 
@@ -140,7 +144,7 @@ async def get_subreddit_info(
             new_tokens = await connector.refresh_token(credentials["refresh_token"])
             if "access_token" in new_tokens:
                 credentials = {**credentials, **new_tokens}
-                store_secret(org_id, service_id, credentials)
+                await store_secret(db, org_id, service_id, credentials)
         except Exception:
             pass
 

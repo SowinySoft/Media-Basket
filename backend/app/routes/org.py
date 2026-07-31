@@ -8,6 +8,10 @@ from app.routes.auth import get_current_user
 from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
+from app.core.logging import get_logger
+
+
+logger = get_logger("org")
 
 router = APIRouter()
 

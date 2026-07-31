@@ -7,7 +7,10 @@ from app.core.vault import store_secret
 from app.models.models import ServiceInstance, CredentialVault
 from app.routes.auth import get_current_user
 from app.connectors.registry import get_connector
+from app.core.logging import get_logger
 
+
+logger = get_logger("oauth")
 router = APIRouter()
 
 
@@ -54,7 +57,7 @@ async def oauth_callback(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Token exchange failed: {str(e)}")
 
-    store_secret(org_id, service_id, token_data)
+    store_secret(db, org_id, service_id, token_data)
 
     existing = await db.execute(
         select(CredentialVault).where(CredentialVault.service_instance_id == service_id)
@@ -93,13 +96,14 @@ async def refresh_token(
         raise HTTPException(status_code=404, detail="Connector not found")
 
     from app.core.vault import read_secret
-    credentials = read_secret(current_user["org_id"], service_id)
+
+    credentials = await read_secret(db, current_user["org_id"], service_id)
     if not credentials or "refresh_token" not in credentials:
         raise HTTPException(status_code=400, detail="No refresh token available")
 
     try:
         new_tokens = await connector.refresh_token(credentials["refresh_token"])
-        store_secret(current_user["org_id"], service_id, {**credentials, **new_tokens})
+        await store_secret(db, current_user["org_id"], service_id, {**credentials, **new_tokens})
         return {"status": "refreshed"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Token refresh failed: {str(e)}")

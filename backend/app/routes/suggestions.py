@@ -12,6 +12,10 @@ from app.core.database import get_db
 from app.core.config import get_settings
 from sqlalchemy import select
 from app.models.models import Suggestion, ContentItem
+from app.core.logging import get_logger
+
+
+logger = get_logger("suggestions")
 
 router = APIRouter()
 settings = get_settings()

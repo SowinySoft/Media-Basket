@@ -8,7 +8,10 @@ from typing import Optional
 from datetime import datetime, timedelta
 from app.routes.auth import get_current_user
 from app.core.database import get_db
+from app.core.logging import get_logger
 
+
+logger = get_logger("export")
 router = APIRouter()
 
 
@@ -150,6 +153,7 @@ async def export_analytics_csv(
     import io
     from app.core.analytics import AnalyticsEngine, TimeRange
     
+
     org_id = current_user["org_id"]
     time_range = TimeRange(
         start=datetime.utcnow() - timedelta(days=days),
