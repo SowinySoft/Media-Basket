@@ -2,13 +2,17 @@ import json
 import hashlib
 import asyncio
 from celery import shared_task
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timedelta, timezone as tz
 from app.core.database import AsyncSessionLocal
 from app.core.vault import read_secret
 from app.models.models import ServiceInstance, ContentItem, ContentMetadata
 from app.connectors.registry import get_connector
 from app.celery_app import celery_app
+from app.core.logging import get_logger
+
+logger = get_logger("tasks")
 
 
 def compute_hash(data: dict) -> str:
@@ -176,3 +180,39 @@ async def _analyze_content(content_id: str, org_id: str):
         db.add(metadata)
         await db.commit()
         return {"status": "analyzed", "sentiment": analysis["sentiment"]}
+
+
+@shared_task(name="tasks.cleanup_old_data", bind=True)
+def cleanup_old_data(self):
+    """Periodic task: delete soft-deleted content older than 30 days."""
+    async def _cleanup():
+        cutoff = datetime.now(tz) - timedelta(days=30)
+        async with AsyncSessionLocal() as db:
+            deleted = await db.execute(
+                delete(ContentItem).where(
+                    ContentItem.deleted_at.isnot(None),
+                    ContentItem.deleted_at < cutoff,
+                )
+            )
+            await db.commit()
+            logger.info("cleanup_old_data_deleted", count=deleted.rowcount)
+            return {"deleted": deleted.rowcount}
+    return run_async(_cleanup())
+
+
+@shared_task(name="tasks.check_credential_expiry", bind=True)
+def check_credential_expiry(self):
+    """Periodic task: check credentials expiring within 7 days and alert."""
+    async def _check():
+        threshold = datetime.now(tz) + timedelta(days=7)
+        async with AsyncSessionLocal() as db:
+            expired = await db.execute(
+                select(ServiceInstance).where(
+                    ServiceInstance.expires_at.isnot(None),
+                    ServiceInstance.expires_at <= threshold,
+                )
+            )
+            services = expired.scalars().all()
+            logger.info("check_credential_expiry_found", count=len(services))
+            return {"expired_count": len(services)}
+    return run_async(_check())
