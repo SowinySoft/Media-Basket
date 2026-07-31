@@ -1,7 +1,8 @@
 # Media_Basket — Roadmap v1 (SaaS-Ready, Self-Hosted)
 
 > **Goal:** Ship a working product in 10 weeks, built as SaaS-ready from day one — multi-user, org model, RBAC, RLS, billing placeholders, tenant isolation — deployed self-hosted for a single user. Flip a switch later and it's multi-tenant.
-> **Strategy:** Self-hosted Docker → 3 connectors → ML pipeline → SaaS plumbing in place → ready to scale.
+> **Strategy:** Self-hosted Docker → 15 connectors → ML pipeline → SaaS plumbing in place → ready to scale.
+> **Current Status:** ✅ v1 COMPLETE — all phases shipped, all audit gaps resolved (30/30).
 
 ---
 
@@ -51,7 +52,7 @@ Rate limits: org-level (one org)       Rate limits: org-level (many orgs)
 
 1. **SaaS-ready from day one** — multi-user, org, RBAC, RLS, billing placeholders built in
 2. **Self-hosted first** — Docker Compose, one user, zero cloud dependency
-3. **3 connectors** — YouTube, Reddit, WhatsApp Business
+3. **15 connectors** — YouTube, Reddit, WhatsApp, Telegram, Instagram, Twitter, Facebook, LinkedIn, TikTok, Discord, Slack, Mastodon, Pinterest, Snapchat, Bluesky
 4. **Tree view as the core UX** — Windows Explorer metaphor, the novel differentiator
 5. **ML-powered moderation** — sentiment, spam, toxicity, auto-tagging from day one
 6. **Flip a switch = multi-tenant** — same codebase, same image, just add users
@@ -68,9 +69,9 @@ Rate limits: org-level (one org)       Rate limits: org-level (many orgs)
 | RBAC | ✅ Built | Owner / Admin / Member / Viewer roles |
 | Row-Level Security | ✅ Active | `org_id` on all tables, PostgreSQL RLS policies |
 | Billing endpoints | ✅ Placeholder | `/api/v1/billing/plan`, `/api/v1/billing/usage` — no Stripe yet |
-| Rate limiting | ✅ Per-org | Token bucket in Redis, org-scoped |
-| Vault namespaces | ✅ Built | `/media_basket/{org_id}/` per tenant |
-| Audit logging | ✅ Active | Append-only `audit_log` table, tenant-scoped |
+| Rate limiting | ✅ Per-org | In-memory sliding window with Prometheus metrics, org-scoped |
+| Vault namespaces | ✅ Built | Envelope encryption (AES-256-GCM) with DEK/KEK, org-isolated credential storage |
+| Audit logging | ✅ Active | Append-only `audit_log` table + `vault_audit_log`, pgAudit, tenant-scoped |
 | Tenant provisioning | ✅ Placeholder | Onboarding flow exists, invite email skipped (no SMTP) |
 | Data export (GDPR) | ✅ Built | Per-org export, delete account |
 | Backup/restore | ✅ Built | Shell scripts, PostgreSQL dump + Vault snapshot |
@@ -79,8 +80,6 @@ Rate limits: org-level (one org)       Rate limits: org-level (many orgs)
 
 ## What v1 Is NOT (Yet)
 
-- ❌ Not 9 connectors (only 3)
-- ❌ Not a plugin SDK
 - ❌ Not SOC 2 compliant
 - ❌ Not horizontally scaled (single Docker Compose)
 - ❌ No Stripe billing (endpoints exist, no payment integration)
@@ -104,7 +103,7 @@ Rate limits: org-level (one org)       Rate limits: org-level (many orgs)
 | NFR-09 | SOC 2 readiness | ❌ Not applicable | Phase 2 — access reviews, audit logs, encryption verification |
 | NFR-10 | GDPR compliance | ✅ Built — export + delete account | ✅ Built — right to deletion, data portability, consent management |
 | NFR-11 | Data residency | Single region (user's machine) | Configurable per org |
-| NFR-12 | Backup frequency | Manual (`./backup.sh`) | Automated daily + on-demand |
+| NFR-12 | Backup frequency | Automated (`./backup.sh` + cron) | Automated daily + on-demand |
 | NFR-13 | Recovery time | Manual restore (`./restore.sh`) | < 1 hour RTO |
 | NFR-14 | Rate limiting | Per-org, configurable | Per-org, per-plan tiers |
 
@@ -977,11 +976,20 @@ SaaS Infrastructure:
   [✓] Data export (GDPR)
   [✓] Delete account
 
-Connectors (3):
+Connectors (15):
   [✓] YouTube — OAuth, Celery, moderation, Vault, ConnectorPlugin ABC
   [✓] Reddit — OAuth, Celery, approve/remove, Vault, ConnectorPlugin ABC
   [✓] WhatsApp — OAuth, webhooks, HMAC verify, Vault, ConnectorPlugin ABC
-  [✓] All 3 implement ConnectorPlugin interface — ready for v2 connectors
+  [✓] Telegram, Instagram, Twitter, Facebook, LinkedIn, TikTok
+  [✓] Discord, Slack, Mastodon, Pinterest, Snapchat, Bluesky
+  [✓] All 15 implement ConnectorPlugin interface — ready for 3rd-party plugins
+
+Plugin SDK:
+  [✓] ConnectorPlugin ABC (Python) — full contract defined
+  [✓] TypeScript Connector SDK (@mediabasket/connector-sdk)
+  [✓] Plugin loader (importlib, in-memory cache)
+  [✓] Plugin manifest validation (Pydantic)
+  [✓] ConnectorType DB model with 15 seeded connectors
 
 Features:
   [✓] Tree view (Windows Explorer metaphor)
@@ -995,9 +1003,7 @@ Features:
   [✓] Backup/restore
 
 NOT in v1:
-  [✗] 9 connectors (only 3)
-  [✗] Plugin SDK
-  [✗] SOC 2
+  [✗] SOC 2 (endpoints exist, no compliance audit)
   [✗] Stripe billing (endpoints exist, no payment)
   [✗] Email delivery (no SMTP)
   [✗] Horizontal scaling (single Docker Compose)
