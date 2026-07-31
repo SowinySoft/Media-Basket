@@ -6,6 +6,8 @@ import { useStore } from "@/lib/store";
 import TreeView from "@/components/TreeView";
 import ContentDetail from "@/components/ContentDetail";
 import AddServiceModal from "@/components/AddServiceModal";
+import ThemeToggle from "@/components/ThemeToggle";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Search, Plus, RefreshCw, LogOut } from "lucide-react";
 
 function TreePageInner() {
@@ -26,6 +28,14 @@ function TreePageInner() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [showAddService, setShowAddService] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  useKeyboardShortcuts([
+    { key: "k", ctrl: true, action: () => { document.querySelector<HTMLInputElement>("[placeholder='Search content...']")?.focus(); }, description: "Quick Search" },
+    { key: "n", ctrl: true, action: () => setShowAddService(true), description: "New Service" },
+    { key: "Escape", action: () => { setShowAddService(false); setShowShortcuts(false); }, description: "Close Modal" },
+    { key: "/", ctrl: true, action: () => setShowShortcuts((v) => !v), description: "Show Shortcuts" },
+  ]);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -84,18 +94,46 @@ function TreePageInner() {
     <main className="flex h-screen bg-gray-900">
       {showAddService && <AddServiceModal onClose={() => setShowAddService(false)} />}
 
+      {/* Keyboard shortcuts overlay */}
+      {showShortcuts && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={() => setShowShortcuts(false)}>
+          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-96" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-white mb-4">Keyboard Shortcuts</h3>
+            <div className="space-y-2 text-sm">
+              {[
+                ["Ctrl+K", "Quick Search"],
+                ["Ctrl+N", "New Service"],
+                ["Ctrl+/", "Toggle Shortcuts"],
+                ["Escape", "Close Modal"],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex justify-between">
+                  <span className="text-gray-400">{desc}</span>
+                  <kbd className="px-2 py-0.5 bg-gray-700 text-gray-300 rounded text-xs">{key}</kbd>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setShowShortcuts(false)} className="mt-4 w-full py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <aside className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
         <div className="p-4 border-b border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-lg font-bold text-white">Media Basket</h1>
-            <button
-              onClick={handleLogout}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <button
+                onClick={handleLogout}
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <div className="relative">

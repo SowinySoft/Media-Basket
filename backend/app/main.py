@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import get_settings
-from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter, facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat, bluesky, search, scheduler
+from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter, facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat, bluesky, search, scheduler, templates, export, comments, activity, bulk, calendar, tasks, approval, audit, alerts, roi, suggestions, dashboards, webhooks_builder, ab_testing, competitors
 from app.middleware.tenant import TenantMiddleware
 from app.core.rate_limiter import RateLimitMiddleware, rate_limiter
 
@@ -19,7 +19,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
+    description="MediaBasket - Unified Social Media Management Platform",
     lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 # Add rate limiting middleware
@@ -61,6 +64,22 @@ app.include_router(snapchat.router, prefix="/api/v1/orgs/{org_id}/services", tag
 app.include_router(bluesky.router, prefix="/api/v1/orgs/{org_id}/services", tags=["bluesky"])
 app.include_router(search.router, prefix="/api/v1/orgs/{org_id}", tags=["search"])
 app.include_router(scheduler.router, prefix="/api/v1/orgs/{org_id}", tags=["scheduler"])
+app.include_router(templates.router, prefix="/api/v1/orgs/{org_id}/templates", tags=["templates"])
+app.include_router(export.router, prefix="/api/v1/orgs/{org_id}/export", tags=["export"])
+app.include_router(comments.router, prefix="/api/v1/orgs/{org_id}/content", tags=["comments"])
+app.include_router(activity.router, prefix="/api/v1/orgs/{org_id}/activity", tags=["activity"])
+app.include_router(bulk.router, prefix="/api/v1/orgs/{org_id}/bulk", tags=["bulk"])
+app.include_router(calendar.router, prefix="/api/v1/orgs/{org_id}/calendar", tags=["calendar"])
+app.include_router(tasks.router, prefix="/api/v1/orgs/{org_id}/tasks", tags=["tasks"])
+app.include_router(approval.router, prefix="/api/v1/orgs/{org_id}/content", tags=["approval"])
+app.include_router(audit.router, prefix="/api/v1/orgs/{org_id}/audit", tags=["audit"])
+app.include_router(alerts.router, prefix="/api/v1/orgs/{org_id}/alerts", tags=["alerts"])
+app.include_router(roi.router, prefix="/api/v1/orgs/{org_id}/roi", tags=["roi"])
+app.include_router(suggestions.router, prefix="/api/v1/orgs/{org_id}/suggestions", tags=["suggestions"])
+app.include_router(dashboards.router, prefix="/api/v1/orgs/{org_id}/dashboards", tags=["dashboards"])
+app.include_router(webhooks_builder.router, prefix="/api/v1/orgs/{org_id}/webhooks", tags=["webhooks"])
+app.include_router(ab_testing.router, prefix="/api/v1/orgs/{org_id}/ab-tests", tags=["ab-tests"])
+app.include_router(competitors.router, prefix="/api/v1/orgs/{org_id}/competitors", tags=["competitors"])
 
 
 @app.get("/")
