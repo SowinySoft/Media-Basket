@@ -1,19 +1,30 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import get_settings
+from app.core.logging import setup_logging, get_logger
+from app.core.metrics import (
+    http_requests_total,
+    http_request_duration_seconds,
+    metrics_endpoint,
+)
 from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter, facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat, bluesky, search, scheduler, templates, export, comments, activity, bulk, calendar, tasks, approval, audit, alerts, roi, suggestions, dashboards, webhooks_builder, ab_testing, competitors, org, members
 from app.middleware.tenant import TenantMiddleware
 from app.core.rate_limiter import RateLimitMiddleware, rate_limiter
+import time
 
 settings = get_settings()
+
+# Setup structured logging
+setup_logging(log_level="DEBUG" if settings.DEBUG else "INFO")
+logger = get_logger("main")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+    logger.info("starting_up", app_version=settings.APP_VERSION)
     yield
-    # Shutdown
+    logger.info("shutting_down")
 
 
 app = FastAPI(
@@ -25,11 +36,19 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# Add rate limiting middleware
+# --- OpenTelemetry Tracing ---
+try:
+    from app.core.tracing import setup_tracing, instrument_fastapi
+    tracer = setup_tracing(settings.APP_NAME.replace(" ", "-").lower())
+    instrument_fastapi(app)
+    logger.info("opentelemetry_tracing_enabled")
+except Exception as e:
+    logger.warning("opentelemetry_tracing_disabled", error=str(e))
+    tracer = None
+
+# --- Middleware (order matters: first added = outermost) ---
 app.add_middleware(RateLimitMiddleware, limiter=rate_limiter)
-
 app.add_middleware(TenantMiddleware)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -38,6 +57,52 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# --- Request metrics middleware ---
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration = time.perf_counter() - start
+
+    path = request.url.path
+    # Normalize path params to avoid high-cardinality labels
+    if "/orgs/" in path:
+        parts = path.split("/")
+        for i, part in enumerate(parts):
+            if part == "orgs" and i + 1 < len(parts) and parts[i + 1] not in ("me",):
+                parts[i + 1] = "{org_id}"
+            if part == "services" and i + 1 < len(parts) and parts[i + 1] not in ("auth", "callback", "webhook"):
+                parts[i + 1] = "{service_id}"
+        path = "/".join(parts)
+
+    http_requests_total.labels(
+        method=request.method,
+        path=path,
+        status=response.status_code,
+    ).inc()
+    http_request_duration_seconds.labels(
+        method=request.method,
+        path=path,
+    ).observe(duration)
+
+    logger.info(
+        "http_request",
+        method=request.method,
+        path=path,
+        status=response.status_code,
+        duration_ms=round(duration * 1000, 2),
+    )
+    return response
+
+
+# --- Prometheus metrics endpoint ---
+@app.get("/metrics")
+async def prometheus_metrics():
+    return metrics_endpoint()
+
+
+# --- Routers ---
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(org.router, prefix="/api/v1/orgs", tags=["orgs"])
