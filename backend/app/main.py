@@ -8,7 +8,7 @@ from app.core.metrics import (
     http_request_duration_seconds,
     metrics_endpoint,
 )
-from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter, facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat, bluesky, search, scheduler, templates, export, comments, activity, bulk, calendar, tasks, approval, audit, alerts, roi, suggestions, dashboards, webhooks_builder, ab_testing, competitors, org, members
+from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter, facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat, bluesky, search, scheduler, templates, export, comments, activity, bulk, calendar, tasks, approval, audit, alerts, roi, suggestions, dashboards, webhooks_builder, ab_testing, competitors, org, members, plugins
 from app.middleware.tenant import TenantMiddleware
 from app.core.rate_limiter import RateLimitMiddleware, rate_limiter
 import time
@@ -147,6 +147,7 @@ app.include_router(dashboards.router, prefix="/api/v1/orgs/{org_id}/dashboards",
 app.include_router(webhooks_builder.router, prefix="/api/v1/orgs/{org_id}/webhooks", tags=["webhooks"])
 app.include_router(ab_testing.router, prefix="/api/v1/orgs/{org_id}/ab-tests", tags=["ab-tests"])
 app.include_router(competitors.router, prefix="/api/v1/orgs/{org_id}/competitors", tags=["competitors"])
+app.include_router(plugins.router, prefix="/api/v1/orgs/{org_id}/plugins", tags=["plugins"])
 
 
 @app.get("/")

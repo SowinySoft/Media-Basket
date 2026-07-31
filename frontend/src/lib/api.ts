@@ -296,4 +296,31 @@ export const api = {
         method: "DELETE",
       }),
   },
+  plugins: {
+    list: (orgId: string) => request<any[]>(`/orgs/${orgId}/plugins`),
+    install: (orgId: string, data: any) =>
+      request<any>(`/orgs/${orgId}/plugins`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    get: (orgId: string, pluginId: string) =>
+      request<any>(`/orgs/${orgId}/plugins/${pluginId}`),
+    update: (orgId: string, pluginId: string, data: any) =>
+      request<any>(`/orgs/${orgId}/plugins/${pluginId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    activate: (orgId: string, pluginId: string) =>
+      request<any>(`/orgs/${orgId}/plugins/${pluginId}/activate`, {
+        method: "POST",
+      }),
+    deactivate: (orgId: string, pluginId: string) =>
+      request<any>(`/orgs/${orgId}/plugins/${pluginId}/deactivate`, {
+        method: "POST",
+      }),
+    uninstall: (orgId: string, pluginId: string) =>
+      request<void>(`/orgs/${orgId}/plugins/${pluginId}`, {
+        method: "DELETE",
+      }),
+  },
 };

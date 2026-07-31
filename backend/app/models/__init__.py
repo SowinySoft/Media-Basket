@@ -23,6 +23,7 @@ from app.models.models import (
     Suggestion,
     VaultAuditLog,
     SyncJob,
+    Plugin,
 )
 
 __all__ = [
@@ -50,4 +51,5 @@ __all__ = [
     "Suggestion",
     "VaultAuditLog",
     "SyncJob",
+    "Plugin",
 ]
