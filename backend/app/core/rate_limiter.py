@@ -10,6 +10,26 @@ from app.core.metrics import rate_limit_remaining, rate_limit_total
 
 logger = get_logger("rate_limiter")
 
+# Map path prefixes to connector types for per-connector tracking
+_CONNECTOR_PATH_MAP = {
+    "/api/v1/orgs/": None,  # will extract from path
+}
+
+
+def _extract_connector_type(path: str) -> str:
+    """Extract connector type from URL path (e.g. /orgs/{id}/services/{id}/youtube/... → youtube)."""
+    parts = path.strip("/").split("/")
+    # Look for known connector names in path
+    connector_names = {
+        "youtube", "reddit", "whatsapp", "telegram", "instagram", "twitter",
+        "facebook", "linkedin", "tiktok", "discord", "slack", "mastodon",
+        "pinterest", "snapchat", "bluesky",
+    }
+    for part in parts:
+        if part in connector_names:
+            return part
+    return "other"
+
 
 class RateLimiter:
     """In-memory rate limiter using sliding window."""
@@ -88,8 +108,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Update Prometheus gauge
         rate_limit_remaining.labels(client_id=client_id[:16], path=path).set(remaining)
 
+        # Per-connector rate limit tracking
+        connector_type = _extract_connector_type(path)
+        if connector_type != "other":
+            rate_limit_remaining.labels(client_id=connector_type, path=f"/connector/{connector_type}").set(remaining)
+
         if is_limited:
             rate_limit_total.labels(client_id=client_id[:16], path=path).inc()
+            if connector_type != "other":
+                rate_limit_total.labels(client_id=connector_type, path=f"/connector/{connector_type}").inc()
             logger.warning("rate_limit_exceeded", client_id=client_id[:16], path=path)
             return Response(
                 content='{"detail":"Rate limit exceeded"}',

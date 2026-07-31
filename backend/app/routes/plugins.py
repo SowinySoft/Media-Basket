@@ -5,6 +5,7 @@ from app.core.database import get_db
 from app.models.models import Plugin
 from app.routes.auth import get_current_user
 from app.core.plugin_loader import load_plugin_from_path, instantiate_plugin, unload_plugin
+from app.core.plugin_validation import validate_plugin_manifest
 from app.connectors.base import ConnectorPlugin
 from pydantic import BaseModel
 from typing import Optional
@@ -74,6 +75,20 @@ async def install_plugin(
 ):
     if current_user["role"] not in ("owner", "admin"):
         raise HTTPException(status_code=403, detail="Only owners and admins can install plugins")
+
+    # Validate manifest schema
+    manifest_data = {
+        "name": data.name,
+        "display_name": data.display_name,
+        "version": data.version,
+        "tier": data.tier,
+        "entry_point": data.entry_point,
+        "capabilities": data.capabilities,
+        "auth": data.auth,
+    }
+    is_valid, errors = validate_plugin_manifest(manifest_data)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=f"Invalid manifest: {'; '.join(errors)}")
 
     # Check for duplicate name in org
     existing = await db.execute(

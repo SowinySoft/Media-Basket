@@ -7,10 +7,12 @@ from pydantic import BaseModel
 from typing import Optional, List
 from app.routes.auth import get_current_user
 from app.core.database import get_db
+from app.core.logging import get_logger
 from sqlalchemy import select
 from app.models.models import Dashboard
 
 router = APIRouter()
+logger = get_logger("dashboards")
 
 
 class DashboardCreate(BaseModel):

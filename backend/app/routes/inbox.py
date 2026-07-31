@@ -5,11 +5,13 @@ from sqlalchemy import select, func, update
 from app.core.database import get_db
 from app.models.models import Notification
 from app.routes.auth import get_current_user
+from app.core.logging import get_logger
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 
 router = APIRouter()
+logger = get_logger("inbox")
 
 
 class NotificationResponse(BaseModel):

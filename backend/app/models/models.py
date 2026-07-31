@@ -95,7 +95,7 @@ class ContentItem(Base):
     service_instance_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("service_instances.id"))
     external_id: Mapped[str] = mapped_column(String(255))
     content_type: Mapped[str] = mapped_column(String(50))  # post | comment | video | message
-    category: Mapped[str] = mapped_column(String(100))  # videos | comments | posts | conversations
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True)  # videos | comments | posts | conversations
     payload: Mapped[dict] = mapped_column(JSONB)
     content_hash: Mapped[str] = mapped_column(String(64))
     ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
