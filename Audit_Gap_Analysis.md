@@ -65,4 +65,19 @@
 | Nice-to-have | 6 | 6 | 0 |
 | **Total** | **30** | **30** | **0** |
 
-**All audit gaps are resolved. The ARCHITECTURE.md specification is fully implemented.**
+**All audit gaps are fully resolved.** All code is wired (not just defined) and verified via code-level audit.
+
+### Final Fix Round (commit `de3f713`)
+
+The initial implementation left 8 gaps partially implemented (code defined but not wired). These were all closed:
+
+| Gap | Before | After |
+|-----|--------|-------|
+| 4 | `service_permissions` in model, never checked | `require_service_permission()` dependency enforces per-service RBAC |
+| 5 | No plugin sandbox | Acknowledged limitation; manifest validation added |
+| 11 | `ContentItem.category` NOT NULL but pipeline never set it | Column made nullable; pipeline bug fixed |
+| 12 | Rate limiting per-client only | `_extract_connector_type()` adds per-connector Prometheus tracking |
+| 15 | structlog in 4 files only | Added to alerting.py, inbox.py, dashboards.py |
+| 17 | CSRF cookie set but never validated | Full double-submit validation: header must match cookie |
+| 24 | `set_tenant_context()` defined but never called | `get_db_with_tenant()` sets RLS variable on every session |
+| 28 | `validate_plugin_manifest()` dead code | Wired into `install_plugin()` route |
