@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
-from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
+from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token, blacklist_token
 from app.core.config import get_settings
 from app.models.models import User, Member, Organization, BillingPlan
 from app.schemas.schemas import UserCreate, UserLogin, TokenResponse, UserResponse, OrganizationResponse
@@ -100,3 +100,37 @@ async def get_me(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+@router.post("/logout")
+async def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """Logout by blacklisting the current access token."""
+    blacklist_token(credentials.credentials)
+    return {"detail": "Logged out successfully"}
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+):
+    """Refresh an access token using a refresh token."""
+    payload = decode_token(credentials.credentials)
+    if not payload or payload.get("type") != "refresh":
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    # Blacklist the old refresh token
+    blacklist_token(credentials.credentials)
+
+    token_data = {
+        "sub": payload["sub"],
+        "org_id": payload["org_id"],
+        "member_id": payload["member_id"],
+        "role": payload["role"],
+    }
+    return TokenResponse(
+        access_token=create_access_token(token_data),
+        refresh_token=create_refresh_token(token_data),
+    )

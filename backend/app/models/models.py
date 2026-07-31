@@ -43,6 +43,7 @@ class Member(Base):
     org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"))
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
     role: Mapped[str] = mapped_column(String(20))  # owner | admin | member | viewer
+    service_permissions: Mapped[dict] = mapped_column(JSONB, default=dict)  # {service_id: "read"|"write"|"admin"}
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     organization: Mapped["Organization"] = relationship(back_populates="members")
@@ -76,8 +77,11 @@ class CredentialVault(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"))
     service_instance_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("service_instances.id"), unique=True)
-    vault_path: Mapped[str] = mapped_column(String(500))
+    encrypted_data: Mapped[bytes] = mapped_column(Text)  # AES-256-GCM encrypted JSON payload
+    nonce: Mapped[bytes] = mapped_column(Text)  # AES-GCM nonce for data encryption
+    wrapped_dek: Mapped[bytes] = mapped_column(Text)  # DEK encrypted by KEK
     key_version: Mapped[int] = mapped_column(Integer, default=1)
+    algorithm: Mapped[str] = mapped_column(String(50), default="AES-256-GCM")
     rotated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     service: Mapped["ServiceInstance"] = relationship(back_populates="credential")

@@ -1,3 +1,5 @@
+"""JWT security: token creation, verification, and session blacklisting."""
+import json
 from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from app.core.config import get_settings
@@ -8,6 +10,18 @@ try:
     from bcrypt import hashpw, checkpw, gensalt
 except ImportError:
     from bcrypt._bcrypt import hashpw, checkpw, gensalt
+
+# In-memory blacklist (production: use Redis)
+_token_blacklist: set[str] = set()
+
+# Also try Redis if available
+_redis_client = None
+try:
+    import redis.asyncio as aioredis
+    if settings.REDIS_URL:
+        _redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+except Exception:
+    pass
 
 
 def hash_password(password: str) -> str:
@@ -35,8 +49,39 @@ def create_refresh_token(data: dict) -> str:
 
 
 def decode_token(token: str) -> dict | None:
+    """Decode and validate a JWT token, checking the blacklist."""
+    if is_token_blacklisted(token):
+        return None
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         return payload
     except JWTError:
         return None
+
+
+def blacklist_token(token: str) -> None:
+    """Add a token to the blacklist (for logout/revocation)."""
+    _token_blacklist.add(token)
+    # Also store in Redis with TTL if available
+    if _redis_client:
+        try:
+            # Decode to get expiry
+            payload = jwt.get_unverified_claims(token)
+            exp = payload.get("exp", 0)
+            ttl = max(0, exp - int(datetime.now(timezone.utc).timestamp()))
+            if ttl > 0:
+                _redis_client.setex(f"blacklist:{token}", ttl, "1")
+        except Exception:
+            pass
+
+
+def is_token_blacklisted(token: str) -> bool:
+    """Check if a token has been revoked."""
+    if token in _token_blacklist:
+        return True
+    if _redis_client:
+        try:
+            return _redis_client.exists(f"blacklist:{token}") == 1
+        except Exception:
+            pass
+    return False
