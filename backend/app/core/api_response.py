@@ -4,7 +4,7 @@ Consistent response format across all endpoints
 """
 from typing import Optional, Any
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class APIResponse(BaseModel):
@@ -13,7 +13,7 @@ class APIResponse(BaseModel):
     data: Optional[Any] = None
     error: Optional[str] = None
     message: Optional[str] = None
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = datetime.now(timezone.utc)
     request_id: Optional[str] = None
 
 
@@ -25,7 +25,7 @@ class PaginatedResponse(BaseModel):
     page: int = 1
     page_size: int = 50
     has_more: bool = False
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = datetime.now(timezone.utc)
 
 
 class ErrorResponse(BaseModel):
@@ -34,7 +34,7 @@ class ErrorResponse(BaseModel):
     error: str
     detail: Optional[str] = None
     code: Optional[str] = None
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = datetime.now(timezone.utc)
 
 
 def success_response(data: Any = None, message: str = None) -> dict:
@@ -43,7 +43,7 @@ def success_response(data: Any = None, message: str = None) -> dict:
         "success": True,
         "data": data,
         "message": message,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -54,7 +54,7 @@ def error_response(error: str, detail: str = None, code: str = None) -> dict:
         "error": error,
         "detail": detail,
         "code": code,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -72,5 +72,5 @@ def paginated_response(
         "page": page,
         "page_size": page_size,
         "has_more": (page * page_size) < total,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

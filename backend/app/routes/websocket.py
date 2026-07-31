@@ -3,7 +3,7 @@ import json
 import asyncio
 from typing import Set
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
-from app.routes.auth import decode_token
+from app.core.security import decode_token
 from app.core.logging import get_logger
 from app.core.metrics import ws_connections_active
 

@@ -40,9 +40,9 @@ class CrossPlatformSearch:
     async def search(self, org_id: str, filters: SearchFilters) -> SearchResults:
         """Search content across all connected services"""
         from sqlalchemy import select, and_, or_
-        from app.models.models import ContentItem, ServiceInstance
+        from app.models.models import ContentItem, ServiceInstance, ContentMetadata
         
-        # Build query
+        # Build query with optional join for metadata filters
         query = select(ContentItem).join(ServiceInstance)
         conditions = [ContentItem.org_id == org_id]
         
@@ -73,13 +73,17 @@ class CrossPlatformSearch:
         if filters.date_to:
             conditions.append(ContentItem.ingested_at <= filters.date_to)
         
+        # Join ContentMetadata for sentiment/flagged filters
+        if filters.sentiment or filters.flagged_only:
+            query = query.join(ContentMetadata, ContentItem.id == ContentMetadata.content_item_id)
+        
         # Sentiment filter
         if filters.sentiment:
-            conditions.append(ContentItem.metadata_["sentiment"].astext == filters.sentiment)
+            conditions.append(ContentMetadata.sentiment == filters.sentiment)
         
         # Flagged only
         if filters.flagged_only:
-            conditions.append(ContentItem.metadata_["flagged"].astext == "true")
+            conditions.append(ContentMetadata.flagged == True)
         
         # Apply all conditions
         if conditions:
@@ -87,18 +91,18 @@ class CrossPlatformSearch:
         
         # Execute
         result = await self.db.execute(query)
-        items = result.scalars().all()
+        items = result.scalars().unique().all()
         
         return SearchResults(
             items=[self._to_dict(item) for item in items],
             total=len(items),
-            filters_applied=filters.dict(exclude_none=True),
+            filters_applied=filters.model_dump(exclude_none=True),
         )
     
     async def aggregate(self, org_id: str) -> dict:
         """Get aggregate stats across all services"""
         from sqlalchemy import select, func
-        from app.models.models import ContentItem, ServiceInstance
+        from app.models.models import ContentItem, ServiceInstance, ContentMetadata
         
         # Total content
         total_query = select(func.count(ContentItem.id)).where(ContentItem.org_id == org_id)
@@ -124,14 +128,15 @@ class CrossPlatformSearch:
         content_type_result = await self.db.execute(content_type_query)
         by_content_type = dict(content_type_result.all())
         
-        # Sentiment breakdown
+        # Sentiment breakdown (join ContentMetadata)
         sentiment_query = (
-            select(ContentItem.metadata_["sentiment"].astext, func.count(ContentItem.id))
+            select(ContentMetadata.sentiment, func.count(ContentItem.id))
+            .join(ContentItem, ContentMetadata.content_item_id == ContentItem.id)
             .where(ContentItem.org_id == org_id)
-            .group_by(ContentItem.metadata_["sentiment"].astext)
+            .group_by(ContentMetadata.sentiment)
         )
         sentiment_result = await self.db.execute(sentiment_query)
-        by_sentiment = dict(sentiment_result.all())
+        by_sentiment = {row[0] or "unknown": row[1] for row in sentiment_result.all()}
         
         return {
             "total_content": total,
@@ -141,12 +146,17 @@ class CrossPlatformSearch:
         }
     
     def _to_dict(self, item) -> dict:
+        meta = item.metadata_record if hasattr(item, "metadata_record") else None
         return {
             "id": str(item.id),
             "external_id": item.external_id,
             "content_type": item.content_type,
             "service_id": str(item.service_instance_id),
             "payload": item.payload,
-            "metadata": item.metadata_,
+            "metadata": {
+                "sentiment": meta.sentiment,
+                "sentiment_score": meta.sentiment_score,
+                "flagged": meta.flagged,
+            } if meta else None,
             "ingested_at": item.ingested_at.isoformat() if item.ingested_at else None,
         }

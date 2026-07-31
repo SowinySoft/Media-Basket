@@ -5,7 +5,7 @@ Assign moderation tasks to team members
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from app.routes.auth import get_current_user
 from app.core.database import get_db
 from sqlalchemy import select
@@ -129,7 +129,7 @@ async def update_task(
     if task.status is not None:
         existing.status = task.status
         if task.status == "done":
-            existing.completed_at = datetime.utcnow()
+            existing.completed_at = datetime.now(timezone.utc)
     if task.assigned_to is not None:
         existing.assigned_to = task.assigned_to
     if task.priority is not None:

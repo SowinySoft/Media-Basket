@@ -8,7 +8,6 @@ Security layers:
 """
 import signal
 import functools
-import resource
 from typing import Any
 from app.core.logging import get_logger
 
@@ -68,6 +67,7 @@ class PluginSandbox:
         try:
             # Set memory limit (Linux only)
             try:
+                import resource
                 resource.setrlimit(
                     resource.RLIMIT_AS,
                     (self.max_memory_mb * 1024 * 1024, self.max_memory_mb * 1024 * 1024)

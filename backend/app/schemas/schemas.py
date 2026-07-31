@@ -108,10 +108,10 @@ class ContentResponse(BaseModel):
     service_instance_id: UUID
     external_id: str
     content_type: str
-    category: str
+    category: Optional[str] = None
     payload: dict
     ingested_at: datetime
-    metadata: Optional[ContentMetadataResponse] = None
+    metadata_record: Optional[ContentMetadataResponse] = None
 
     class Config:
         from_attributes = True

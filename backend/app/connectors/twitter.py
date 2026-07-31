@@ -82,7 +82,7 @@ class TwitterConnector(ConnectorPlugin):
                     "grant_type": "authorization_code",
                     "client_id": self.client_id,
                     "redirect_uri": self.redirect_uri,
-                    "code_verifier": self._pkce_verifier or "fallback",
+                    "code_verifier": self._pkce_verifier or "",
                 },
                 auth=(self.client_id, self.client_secret),
             )

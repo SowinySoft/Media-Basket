@@ -23,8 +23,15 @@ export default function ServiceModeratePage({ params }: { params: Promise<{ id: 
 
   const fetchData = async () => {
     const token = localStorage.getItem("access_token");
-    const payload = JSON.parse(atob(token!.split(".")[1]));
-    const orgId = payload.org_id;
+    if (!token) { router.push("/login"); return; }
+    let orgId: string;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      orgId = payload.org_id;
+    } catch {
+      router.push("/login");
+      return;
+    }
 
     try {
       const [svcRes, contentRes] = await Promise.all([
@@ -43,8 +50,16 @@ export default function ServiceModeratePage({ params }: { params: Promise<{ id: 
   const handleModerate = async (contentId: string, action: string) => {
     setActionLoading(contentId);
     const token = localStorage.getItem("access_token");
-    const payload = JSON.parse(atob(token!.split(".")[1]));
-    const orgId = payload.org_id;
+    if (!token) { router.push("/login"); setActionLoading(null); return; }
+    let orgId: string;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      orgId = payload.org_id;
+    } catch {
+      router.push("/login");
+      setActionLoading(null);
+      return;
+    }
 
     try {
       const res = await fetch(`${API_BASE}/orgs/${orgId}/moderation`, {

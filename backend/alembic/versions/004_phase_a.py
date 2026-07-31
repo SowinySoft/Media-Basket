@@ -47,6 +47,15 @@ def upgrade() -> None:
     op.create_index("ix_sync_jobs_service_instance_id", "sync_jobs", ["service_instance_id"])
     op.create_index("ix_sync_jobs_status", "sync_jobs", ["status"])
 
+    # Enable RLS on org-scoped tables
+    org_scoped_tables = ["vault_audit_log", "sync_jobs"]
+    for table in org_scoped_tables:
+        op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
+        op.execute(f"""
+            CREATE POLICY org_isolation ON {table}
+            USING (org_id = current_setting('app.current_tenant')::UUID)
+        """)
+
 
 def downgrade() -> None:
     op.drop_table("sync_jobs")

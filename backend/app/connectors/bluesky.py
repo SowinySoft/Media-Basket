@@ -1,5 +1,6 @@
 import httpx
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from app.connectors.base import ConnectorPlugin, ConnectorManifest
 from app.core.config import get_settings
 
@@ -115,7 +116,7 @@ class BlueskyConnector(ConnectorPlugin):
                 "record": {
                     "$type": "app.bsky.feed.post",
                     "text": message,
-                    "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+                    "createdAt": datetime.now(timezone.utc).isoformat(),
                     "reply": {"root": {"uri": content_id, "cid": ""}, "parent": {"uri": content_id, "cid": ""}} if content_id else None,
                 },
             }, method="POST")

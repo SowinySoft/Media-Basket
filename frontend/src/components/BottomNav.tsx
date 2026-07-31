@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Trees, LayoutDashboard, Inbox, Settings, User } from "lucide-react";
+import { Trees, LayoutDashboard, Inbox, Settings } from "lucide-react";
 
 interface Props {
   unreadCount?: number;
@@ -12,7 +12,6 @@ const tabs = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Inbox", icon: Inbox, href: "/inbox" },
   { label: "Settings", icon: Settings, href: "/settings" },
-  { label: "Profile", icon: User, href: "/profile" },
 ] as const;
 
 export default function BottomNav({ unreadCount = 0 }: Props) {

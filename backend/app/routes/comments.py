@@ -67,7 +67,7 @@ async def create_comment(
     db=Depends(get_db),
 ):
     org_id = current_user["org_id"]
-    user_id = current_user["user_id"]
+    user_id = current_user["sub"]
     member_id = current_user.get("member_id")
 
     new_comment = InternalComment(

@@ -181,22 +181,24 @@ class ContentIngestionPipeline:
 
         created_ids = []
         for item in items:
+            payload = {
+                "title": item.title,
+                "body": item.body,
+                "url": item.url,
+                "platform_created_at": item.platform_created_at.isoformat() if item.platform_created_at else None,
+                "likes": item.likes,
+                "comments_count": item.comments_count,
+                "shares": item.shares,
+                "views": item.views,
+                "status": item.status,
+                "flagged": item.flagged,
+            }
             ci = ContentItem(
                 org_id=self.org_id,
                 service_instance_id=item.service_id,
                 external_id=item.external_id,
                 content_type=item.content_type,
-                title=item.title,
-                body=item.body,
-                url=item.url,
-                platform_created_at=item.platform_created_at,
-                ingested_at=item.ingested_at,
-                likes=item.likes,
-                comments_count=item.comments_count,
-                shares=item.shares,
-                views=item.views,
-                status=item.status,
-                flagged=item.flagged,
+                payload=payload,
                 content_hash=item.content_hash,
             )
             self.db.add(ci)
@@ -205,12 +207,13 @@ class ContentIngestionPipeline:
 
             if item.sentiment or item.spam_score is not None or item.auto_tags:
                 meta = ContentMetadata(
-                    content_item_id=str(ci.id),
+                    org_id=self.org_id,
+                    content_item_id=ci.id,
                     sentiment=item.sentiment,
                     sentiment_score=item.sentiment_score,
                     spam_score=item.spam_score,
                     language=item.language,
-                    tags=item.auto_tags,
+                    auto_tags=item.auto_tags,
                 )
                 self.db.add(meta)
 

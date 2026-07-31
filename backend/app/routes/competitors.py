@@ -5,7 +5,7 @@ Track competitor accounts
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from app.routes.auth import get_current_user
 from app.core.database import get_db
 from sqlalchemy import select
@@ -135,7 +135,7 @@ async def sync_competitor(
         raise HTTPException(status_code=404, detail="Competitor not found")
 
     # Update last_synced_at
-    competitor.last_synced_at = datetime.utcnow()
+    competitor.last_synced_at = datetime.now(timezone.utc)
     await db.commit()
 
     return {"ok": True, "synced_at": competitor.last_synced_at.isoformat()}

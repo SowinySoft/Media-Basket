@@ -4,7 +4,7 @@ Track all user actions
 """
 from fastapi import APIRouter, Depends, Query
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.routes.auth import get_current_user
 from app.core.database import get_db
 from sqlalchemy import select
@@ -28,7 +28,7 @@ async def get_audit_log(
     db=Depends(get_db),
 ):
     org_id = current_user["org_id"]
-    start_date = datetime.utcnow() - timedelta(days=days)
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
 
     query = (
         select(AuditLog, User.name, User.email)
@@ -47,7 +47,7 @@ async def get_audit_log(
     if resource_type:
         query = query.where(AuditLog.resource_type == resource_type)
     if user_id:
-        query = query.where(AuditLog.member_id == user_id)
+        query = query.where(Member.user_id == user_id)
 
     result = await db.execute(query)
     rows = result.all()
@@ -100,7 +100,7 @@ async def get_audit_stats(
     db=Depends(get_db),
 ):
     org_id = current_user["org_id"]
-    start_date = datetime.utcnow() - timedelta(days=days)
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
 
     result = await db.execute(
         select(AuditLog.action)

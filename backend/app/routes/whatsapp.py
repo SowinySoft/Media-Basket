@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+import hashlib
+import hmac
 from app.core.database import get_db
 from app.core.config import get_settings
 from app.core.vault import read_secret, store_secret
@@ -15,6 +17,16 @@ logger = get_logger("whatsapp")
 
 settings = get_settings()
 router = APIRouter()
+
+
+def _verify_hmac_signature(body: bytes, signature_header: str, app_secret: str) -> bool:
+    """Verify HMAC-SHA256 signature from Facebook/WhatsApp."""
+    if not signature_header or not app_secret:
+        return False
+    expected = "sha256=" + hmac.new(
+        app_secret.encode("utf-8"), body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature_header)
 
 
 @router.get("/webhook/whatsapp")
@@ -42,16 +54,23 @@ async def receive_whatsapp_message(
     """Webhook endpoint for receiving WhatsApp messages.
     
     Facebook sends POST requests when messages are received.
-    We store them in the database and can notify connected clients via WebSocket.
+    We verify the HMAC-SHA256 signature, store them in the database,
+    and notify connected clients via WebSocket.
     """
+    raw_body = await request.body()
+
+    # Verify HMAC signature
+    signature = request.headers.get("x-hub-signature-256", "")
+    if settings.WHATSAPP_APP_SECRET:
+        if not _verify_hmac_signature(raw_body, signature, settings.WHATSAPP_APP_SECRET):
+            logger.warning("webhook_hmac_verification_failed")
+            raise HTTPException(status_code=403, detail="Invalid signature")
+
     body = await request.json()
     
     connector = get_connector("whatsapp")
     if not connector:
         raise HTTPException(status_code=500, detail="WhatsApp connector not found")
-
-    # Verify webhook signature (optional but recommended for production)
-    signature = request.headers.get("X-Hub-Signature-256", "")
     
     # Parse the webhook payload
     parsed = connector.parse_webhook(await request.body())

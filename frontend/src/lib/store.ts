@@ -154,7 +154,13 @@ export const useStore = create<TreeState>((set, get) => ({
       if (!res.ok) throw new Error("Failed to fetch user");
       const user = await res.json();
 
-      const payload = JSON.parse(atob(token.split(".")[1]));
+      let payload: any;
+      try {
+        payload = JSON.parse(atob(token.split(".")[1]));
+      } catch {
+        get().logout();
+        return;
+      }
 
       // Fetch real org data
       try {

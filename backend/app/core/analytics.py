@@ -2,7 +2,7 @@
 Analytics and Reporting API
 Cross-platform analytics and insights
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from pydantic import BaseModel
 
@@ -14,17 +14,17 @@ class TimeRange(BaseModel):
     
     @classmethod
     def last_7_days(cls):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return cls(start=now - timedelta(days=7), end=now)
     
     @classmethod
     def last_30_days(cls):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return cls(start=now - timedelta(days=30), end=now)
     
     @classmethod
     def last_90_days(cls):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return cls(start=now - timedelta(days=90), end=now)
 
 
@@ -63,7 +63,7 @@ class AnalyticsEngine:
             time_range = TimeRange.last_30_days()
         
         from sqlalchemy import select, func
-        from app.models.models import ContentItem, ServiceInstance
+        from app.models.models import ContentItem, ServiceInstance, ContentMetadata
         
         # Total content
         total_query = (
@@ -76,20 +76,21 @@ class AnalyticsEngine:
         total_result = await self.db.execute(total_query)
         total_content = total_result.scalar() or 0
         
-        # Sentiment breakdown
+        # Sentiment breakdown (join ContentMetadata)
         sentiment_query = (
             select(
-                ContentItem.metadata_["sentiment"].astext,
+                ContentMetadata.sentiment,
                 func.count(ContentItem.id)
             )
+            .join(ContentItem, ContentMetadata.content_item_id == ContentItem.id)
             .where(
                 ContentItem.org_id == org_id,
                 ContentItem.ingested_at.between(time_range.start, time_range.end)
             )
-            .group_by(ContentItem.metadata_["sentiment"].astext)
+            .group_by(ContentMetadata.sentiment)
         )
         sentiment_result = await self.db.execute(sentiment_query)
-        sentiment_breakdown = dict(sentiment_result.all())
+        sentiment_breakdown = {row[0] or "unknown": row[1] for row in sentiment_result.all()}
         
         # By connector type
         connector_query = (
@@ -116,12 +117,13 @@ class AnalyticsEngine:
         content_type_result = await self.db.execute(content_type_query)
         top_content_types = dict(content_type_result.all())
         
-        # Flagged content
+        # Flagged content (join ContentMetadata)
         flagged_query = (
             select(func.count(ContentItem.id))
+            .join(ContentMetadata, ContentMetadata.content_item_id == ContentItem.id)
             .where(
                 ContentItem.org_id == org_id,
-                ContentItem.metadata_["flagged"].astext == "true",
+                ContentMetadata.flagged == True,
                 ContentItem.ingested_at.between(time_range.start, time_range.end)
             )
         )
@@ -142,7 +144,7 @@ class AnalyticsEngine:
             time_range = TimeRange.last_30_days()
         
         from sqlalchemy import select, func
-        from app.models.models import ContentItem, ServiceInstance
+        from app.models.models import ContentItem, ServiceInstance, ContentMetadata
         
         # Get service IDs for this connector
         service_query = (
@@ -169,9 +171,10 @@ class AnalyticsEngine:
         total_result = await self.db.execute(total_query)
         total_content = total_result.scalar() or 0
         
-        # Average sentiment
+        # Average sentiment (join ContentMetadata)
         sentiment_query = (
-            select(func.avg(ContentItem.metadata_["sentiment_score"].astext.cast(Float)))
+            select(func.avg(ContentMetadata.sentiment_score))
+            .join(ContentItem, ContentMetadata.content_item_id == ContentItem.id)
             .where(
                 ContentItem.service_instance_id.in_(service_ids),
                 ContentItem.ingested_at.between(time_range.start, time_range.end)
@@ -183,7 +186,7 @@ class AnalyticsEngine:
         return ConnectorAnalytics(
             connector_type=connector_type,
             total_content=total_content,
-            avg_sentiment=avg_sentiment,
+            avg_sentiment=float(avg_sentiment),
         )
     
     async def get_engagement_timeline(self, org_id: str, time_range: TimeRange = None) -> list[dict]:

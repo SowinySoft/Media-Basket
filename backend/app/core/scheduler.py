@@ -2,7 +2,7 @@
 Content Scheduling System
 Schedule posts across all connected platforms
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel
 from enum import Enum
@@ -34,7 +34,7 @@ class ScheduledPost(BaseModel):
     status: ScheduleStatus = ScheduleStatus.PENDING
     
     # Metadata
-    created_at: datetime = datetime.utcnow()
+    created_at: datetime = datetime.now(timezone.utc)
     published_at: Optional[datetime] = None
     error: Optional[str] = None
     external_id: Optional[str] = None
@@ -90,13 +90,14 @@ class ContentScheduler:
     
     async def publish_now(self, post_id: str, org_id: str) -> dict:
         """Immediately publish a scheduled post"""
+        from sqlalchemy import select as sa_select
         from app.models.models import ScheduledPost as ScheduledPostModel
         from app.connectors.registry import get_connector
         from app.core.vault import read_secret
         
         # Get the scheduled post
         result = await self.db.execute(
-            select(ScheduledPostModel).where(
+            sa_select(ScheduledPostModel).where(
                 ScheduledPostModel.id == post_id,
                 ScheduledPostModel.org_id == org_id,
             )
@@ -114,7 +115,7 @@ class ContentScheduler:
         if not connector:
             return {"error": f"Connector not found: {post.connector_type}"}
         
-        credentials = read_secret(org_id, str(post.service_instance_id))
+        credentials = await read_secret(self.db, org_id, str(post.service_instance_id))
         if not credentials:
             return {"error": "No credentials found"}
         
@@ -133,7 +134,7 @@ class ContentScheduler:
             
             # Update status
             post.status = ScheduleStatus.PUBLISHED
-            post.published_at = datetime.utcnow()
+            post.published_at = datetime.now(timezone.utc)
             await self.db.flush()
             
             return {"status": "published", "post_id": str(post.id)}
@@ -170,11 +171,12 @@ class ContentScheduler:
             select(ScheduledPostModel)
             .where(
                 ScheduledPostModel.status == ScheduleStatus.SCHEDULED,
-                ScheduledPostModel.scheduled_at <= datetime.utcnow()
+                ScheduledPostModel.scheduled_at <= datetime.now(timezone.utc)
             )
         )
         
-        return result.scalars().all()
+        posts = result.scalars().all()
+        return [self._to_dict(p) for p in posts]
     
     def _to_dict(self, post) -> dict:
         return {

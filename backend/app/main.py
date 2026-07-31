@@ -14,7 +14,7 @@ from app.core.metrics import (
 )
 from app.routes import (
     auth, services, content, moderation, billing, health, oauth, websocket,
-    youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter,
+    youtube, reddit, whatsapp, telegram, instagram, twitter,
     facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat,
     bluesky, search, scheduler, templates, export, comments, activity, bulk,
     calendar, tasks, approval, audit, alerts, roi, suggestions, dashboards,
@@ -57,7 +57,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         request_id=request_id,
         path=request.url.path,
         method=request.method,
-        error type=type(exc).__name__,
+        error_type=type(exc).__name__,
         error=str(exc),
         exc_info=True,
     )
@@ -172,7 +172,6 @@ app.include_router(websocket.router, prefix="/api/v1", tags=["websocket"])
 app.include_router(youtube.router, prefix="/api/v1/orgs/{org_id}/services", tags=["youtube"])
 app.include_router(reddit.router, prefix="/api/v1/orgs/{org_id}/services", tags=["reddit"])
 app.include_router(whatsapp.router, prefix="/api/v1/orgs/{org_id}/services", tags=["whatsapp"])
-app.include_router(whatsapp_webhook.router, prefix="/api/v1/services", tags=["webhook"])
 app.include_router(telegram.router, prefix="/api/v1/orgs/{org_id}/services", tags=["telegram"])
 app.include_router(instagram.router, prefix="/api/v1/orgs/{org_id}/services", tags=["instagram"])
 app.include_router(twitter.router, prefix="/api/v1/orgs/{org_id}/services", tags=["twitter"])

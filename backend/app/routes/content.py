@@ -16,7 +16,6 @@ router = APIRouter()
 
 @router.get("", response_model=list[ContentResponse])
 async def list_content(
-    org_id: str,
     service_id: str | None = None,
     content_type: str | None = None,
     category: str | None = None,
@@ -25,6 +24,7 @@ async def list_content(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    org_id = current_user["org_id"]
     query = (
         select(ContentItem)
         .options(selectinload(ContentItem.metadata_record))
@@ -52,10 +52,10 @@ async def list_content(
             "category": item.category,
             "payload": item.payload,
             "ingested_at": item.ingested_at,
-            "metadata": None,
+            "metadata_record": None,
         }
         if item.metadata_record:
-            item_dict["metadata"] = {
+            item_dict["metadata_record"] = {
                 "sentiment": item.metadata_record.sentiment,
                 "sentiment_score": item.metadata_record.sentiment_score,
                 "spam_score": item.metadata_record.spam_score,

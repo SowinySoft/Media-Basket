@@ -38,14 +38,26 @@ export default function MembersPage() {
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (!token) { router.push("/login"); return; }
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    setCurrentUserRole(payload.role);
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      setCurrentUserRole(payload.role);
+    } catch {
+      router.push("/login");
+      return;
+    }
     fetchMembers();
   }, []);
 
   const fetchMembers = async () => {
     const token = localStorage.getItem("access_token");
-    const orgId = JSON.parse(atob(token!.split(".")[1])).org_id;
+    if (!token) { router.push("/login"); return; }
+    let orgId: string;
+    try {
+      orgId = JSON.parse(atob(token.split(".")[1])).org_id;
+    } catch {
+      router.push("/login");
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE}/orgs/${orgId}/members`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -59,7 +71,15 @@ export default function MembersPage() {
     setInviting(true);
     setError("");
     const token = localStorage.getItem("access_token");
-    const orgId = JSON.parse(atob(token!.split(".")[1])).org_id;
+    if (!token) { router.push("/login"); setInviting(false); return; }
+    let orgId: string;
+    try {
+      orgId = JSON.parse(atob(token.split(".")[1])).org_id;
+    } catch {
+      router.push("/login");
+      setInviting(false);
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE}/orgs/${orgId}/members`, {
         method: "POST",
@@ -85,7 +105,14 @@ export default function MembersPage() {
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
     const token = localStorage.getItem("access_token");
-    const orgId = JSON.parse(atob(token!.split(".")[1])).org_id;
+    if (!token) { router.push("/login"); return; }
+    let orgId: string;
+    try {
+      orgId = JSON.parse(atob(token.split(".")[1])).org_id;
+    } catch {
+      router.push("/login");
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE}/orgs/${orgId}/members/${memberId}/role`, {
         method: "PATCH",
@@ -102,7 +129,14 @@ export default function MembersPage() {
   const handleRemove = async (memberId: string) => {
     if (!confirm("Remove this member?")) return;
     const token = localStorage.getItem("access_token");
-    const orgId = JSON.parse(atob(token!.split(".")[1])).org_id;
+    if (!token) { router.push("/login"); return; }
+    let orgId: string;
+    try {
+      orgId = JSON.parse(atob(token.split(".")[1])).org_id;
+    } catch {
+      router.push("/login");
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE}/orgs/${orgId}/members/${memberId}`, {
         method: "DELETE",

@@ -5,7 +5,7 @@ Test different content variations
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from app.routes.auth import get_current_user
 from app.core.database import get_db
 from sqlalchemy import select
@@ -101,9 +101,9 @@ async def update_test(
     if test.status is not None:
         existing.status = test.status
         if test.status == "running":
-            existing.started_at = datetime.utcnow()
+            existing.started_at = datetime.now(timezone.utc)
         elif test.status in ("completed", "cancelled"):
-            existing.ended_at = datetime.utcnow()
+            existing.ended_at = datetime.now(timezone.utc)
 
     await db.commit()
     return {"ok": True}
@@ -126,7 +126,7 @@ async def start_test(
         raise HTTPException(status_code=400, detail="Test is not in draft status")
 
     test.status = "running"
-    test.started_at = datetime.utcnow()
+    test.started_at = datetime.now(timezone.utc)
     await db.commit()
     return {"ok": True}
 
@@ -147,7 +147,7 @@ async def stop_test(
         raise HTTPException(status_code=404, detail="Test not found")
 
     test.status = "completed"
-    test.ended_at = datetime.utcnow()
+    test.ended_at = datetime.now(timezone.utc)
     if winner_id:
         test.winner_id = winner_id
     await db.commit()

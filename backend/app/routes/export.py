@@ -5,7 +5,7 @@ Export analytics to CSV/PDF
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.routes.auth import get_current_user
 from app.core.database import get_db
 from app.core.logging import get_logger
@@ -27,14 +27,16 @@ async def export_csv(
     import csv
     import io
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
     from app.models.models import ContentItem, ServiceInstance
     
     org_id = current_user["org_id"]
-    start_date = datetime.utcnow() - timedelta(days=days)
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
     
     query = (
         select(ContentItem, ServiceInstance.connector_type)
         .join(ServiceInstance)
+        .options(selectinload(ContentItem.metadata_record))
         .where(
             ContentItem.org_id == org_id,
             ContentItem.ingested_at >= start_date
@@ -63,7 +65,11 @@ async def export_csv(
     # Data
     for item, conn_type in items:
         payload = item.payload or {}
-        metadata = (item.metadata_record.__dict__ if item.metadata_record else {})
+        meta = item.metadata_record
+        metadata = {
+            "sentiment": meta.sentiment if meta else "",
+            "spam_score": meta.spam_score if meta else 0,
+        }
         
         writer.writerow([
             str(item.id),
@@ -86,7 +92,7 @@ async def export_csv(
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=mediabasket_export_{datetime.utcnow().strftime('%Y%m%d')}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=mediabasket_export_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"}
     )
 
 
@@ -101,14 +107,16 @@ async def export_json(
     """Export content to JSON"""
     import json
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
     from app.models.models import ContentItem, ServiceInstance
     
     org_id = current_user["org_id"]
-    start_date = datetime.utcnow() - timedelta(days=days)
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
     
     query = (
         select(ContentItem, ServiceInstance.connector_type)
         .join(ServiceInstance)
+        .options(selectinload(ContentItem.metadata_record))
         .where(
             ContentItem.org_id == org_id,
             ContentItem.ingested_at >= start_date
@@ -125,20 +133,25 @@ async def export_json(
     
     export_data = []
     for item, conn_type in items:
+        meta = item.metadata_record
         export_data.append({
             "id": str(item.id),
             "external_id": item.external_id,
             "content_type": item.content_type,
             "connector_type": conn_type,
             "payload": item.payload,
-            "metadata": item.metadata_record.__dict__ if item.metadata_record else {},
+            "metadata": {
+                "sentiment": meta.sentiment,
+                "sentiment_score": meta.sentiment_score,
+                "flagged": meta.flagged,
+            } if meta else None,
             "ingested_at": item.ingested_at.isoformat() if item.ingested_at else None,
         })
     
     return StreamingResponse(
         iter([json.dumps(export_data, indent=2)]),
         media_type="application/json",
-        headers={"Content-Disposition": f"attachment; filename=mediabasket_export_{datetime.utcnow().strftime('%Y%m%d')}.json"}
+        headers={"Content-Disposition": f"attachment; filename=mediabasket_export_{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"}
     )
 
 
@@ -156,8 +169,8 @@ async def export_analytics_csv(
 
     org_id = current_user["org_id"]
     time_range = TimeRange(
-        start=datetime.utcnow() - timedelta(days=days),
-        end=datetime.utcnow()
+        start=datetime.now(timezone.utc) - timedelta(days=days),
+        end=datetime.now(timezone.utc)
     )
     
     engine = AnalyticsEngine(db)
@@ -189,5 +202,5 @@ async def export_analytics_csv(
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=mediabasket_analytics_{datetime.utcnow().strftime('%Y%m%d')}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=mediabasket_analytics_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"}
     )

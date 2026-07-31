@@ -4,7 +4,7 @@ Track clicks/conversions per post with UTM parameters
 """
 from fastapi import APIRouter, Depends, Query
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.routes.auth import get_current_user
 from app.core.database import get_db
 from sqlalchemy import select, func
@@ -51,7 +51,7 @@ async def get_roi_summary(
     db=Depends(get_db),
 ):
     org_id = current_user["org_id"]
-    start_date = datetime.utcnow() - timedelta(days=days)
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
 
     # Count events by type
     result = await db.execute(

@@ -4,7 +4,7 @@ Cross-platform search across all connected services
 """
 from fastapi import APIRouter, Depends, Query
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from app.routes.auth import get_current_user
 from app.core.search import CrossPlatformSearch, SearchFilters
 from app.core.api_response import success_response, paginated_response
@@ -65,8 +65,8 @@ async def get_analytics_summary(
     
     org_id = current_user["org_id"]
     time_range = TimeRange(
-        start=datetime.utcnow() - __import__("datetime").timedelta(days=days),
-        end=datetime.utcnow()
+        start=datetime.now(timezone.utc) - timedelta(days=days),
+        end=datetime.now(timezone.utc)
     )
     
     engine = AnalyticsEngine(db)
@@ -87,8 +87,8 @@ async def get_connector_analytics(
     
     org_id = current_user["org_id"]
     time_range = TimeRange(
-        start=datetime.utcnow() - __import__("datetime").timedelta(days=days),
-        end=datetime.utcnow()
+        start=datetime.now(timezone.utc) - timedelta(days=days),
+        end=datetime.now(timezone.utc)
     )
     
     engine = AnalyticsEngine(db)
@@ -108,8 +108,8 @@ async def get_engagement_timeline(
     
     org_id = current_user["org_id"]
     time_range = TimeRange(
-        start=datetime.utcnow() - __import__("datetime").timedelta(days=days),
-        end=datetime.utcnow()
+        start=datetime.now(timezone.utc) - timedelta(days=days),
+        end=datetime.now(timezone.utc)
     )
     
     engine = AnalyticsEngine(db)

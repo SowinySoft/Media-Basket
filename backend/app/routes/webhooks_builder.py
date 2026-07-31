@@ -8,7 +8,7 @@ from typing import Optional, List
 import hashlib
 import hmac
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from app.routes.auth import get_current_user
 from app.core.database import get_db
 from sqlalchemy import select
@@ -158,7 +158,7 @@ async def test_webhook(
     import httpx
     payload = {
         "event": "webhook.test",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "data": {"message": "This is a test webhook from MediaBasket"},
     }
 

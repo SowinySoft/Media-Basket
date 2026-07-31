@@ -34,7 +34,7 @@ async def run_cleanup(
     summary = {}
 
     # Content
-    cutoff_content = text(f"NOW() - INTERVAL '{content_days} days'")
+    cutoff_content = text("NOW() - INTERVAL :days days").bindparams(days=str(content_days))
     q = delete(ContentItem).where(
         ContentItem.org_id == org_id,
         ContentItem.ingested_at < cutoff_content,
@@ -53,7 +53,7 @@ async def run_cleanup(
         data_retention_deleted_total.labels(table_name="content_items").inc(result.rowcount)
 
     # Audit log
-    cutoff_audit = text(f"NOW() - INTERVAL '{audit_days} days'")
+    cutoff_audit = text("NOW() - INTERVAL :days days").bindparams(days=str(audit_days))
     if dry_run:
         cnt = (await db.execute(
             select(func.count(AuditLog.id)).where(
@@ -70,7 +70,7 @@ async def run_cleanup(
         data_retention_deleted_total.labels(table_name="audit_log").inc(result.rowcount)
 
     # Activity log
-    cutoff_activity = text(f"NOW() - INTERVAL '{activity_days} days'")
+    cutoff_activity = text("NOW() - INTERVAL :days days").bindparams(days=str(activity_days))
     if dry_run:
         cnt = (await db.execute(
             select(func.count(ActivityLog.id)).where(
@@ -86,7 +86,7 @@ async def run_cleanup(
         summary["activity_log"] = result.rowcount
 
     # Notifications
-    cutoff_notif = text(f"NOW() - INTERVAL '{notification_days} days'")
+    cutoff_notif = text("NOW() - INTERVAL :days days").bindparams(days=str(notification_days))
     if dry_run:
         cnt = (await db.execute(
             select(func.count(Notification.id)).where(

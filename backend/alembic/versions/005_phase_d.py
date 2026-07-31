@@ -35,6 +35,13 @@ def upgrade() -> None:
     op.create_index("ix_plugins_org_id", "plugins", ["org_id"])
     op.create_index("ix_plugins_name", "plugins", ["name"])
 
+    # Enable RLS
+    op.execute("ALTER TABLE plugins ENABLE ROW LEVEL SECURITY")
+    op.execute("""
+        CREATE POLICY org_isolation ON plugins
+        USING (org_id = current_setting('app.current_tenant')::UUID)
+    """)
+
 
 def downgrade() -> None:
     op.drop_table("plugins")

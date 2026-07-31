@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Text, Integer, Boolean, DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy import String, Text, Integer, Boolean, DateTime, Float, ForeignKey, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
@@ -77,9 +77,9 @@ class CredentialVault(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"))
     service_instance_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("service_instances.id"), unique=True)
-    encrypted_data: Mapped[bytes] = mapped_column(Text)  # AES-256-GCM encrypted JSON payload
-    nonce: Mapped[bytes] = mapped_column(Text)  # AES-GCM nonce for data encryption
-    wrapped_dek: Mapped[bytes] = mapped_column(Text)  # DEK encrypted by KEK
+    encrypted_data: Mapped[str] = mapped_column(Text)  # AES-256-GCM encrypted JSON payload
+    nonce: Mapped[str] = mapped_column(Text)  # AES-GCM nonce for data encryption
+    wrapped_dek: Mapped[str] = mapped_column(Text)  # DEK encrypted by KEK
     key_version: Mapped[int] = mapped_column(Integer, default=1)
     algorithm: Mapped[str] = mapped_column(String(50), default="AES-256-GCM")
     rotated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -112,9 +112,9 @@ class ContentMetadata(Base):
     org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"))
     content_item_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("content_items.id"), unique=True)
     sentiment: Mapped[str | None] = mapped_column(String(20), nullable=True)  # positive | neutral | negative
-    sentiment_score: Mapped[float | None] = mapped_column(nullable=True)
-    spam_score: Mapped[float | None] = mapped_column(nullable=True)
-    toxicity_score: Mapped[float | None] = mapped_column(nullable=True)
+    sentiment_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    spam_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    toxicity_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     auto_tags: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     language: Mapped[str | None] = mapped_column(String(10), nullable=True)
     flagged: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -232,7 +232,7 @@ class InternalComment(Base):
     content_item_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("content_items.id"))
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
     body: Mapped[str] = mapped_column(Text)
-    parent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("internal_comments.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
