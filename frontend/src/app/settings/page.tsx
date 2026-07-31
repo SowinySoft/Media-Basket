@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import ThemeToggle from "@/components/ThemeToggle";
-import { ArrowLeft, Building2, Save, Trash2, CreditCard, Users, Key, Settings, Puzzle, Bell, Clock, Database, ChevronRight } from "lucide-react";
+import { ArrowLeft, Building2, Save, Trash2, CreditCard, Users, Key, Settings, Puzzle, Bell, Clock, Database, ChevronRight, Zap } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -133,6 +133,7 @@ export default function OrgSettingsPage() {
                 { href: "/settings/alerting", icon: Bell, label: "Alerting Rules", desc: "Configure alerts" },
                 { href: "/settings/retention", icon: Clock, label: "Data Retention", desc: "Cleanup policies" },
                 { href: "/settings/backup", icon: Database, label: "Backup & Restore", desc: "Data backup" },
+                { href: "/workflows", icon: Zap, label: "Workflows", desc: "Automation pipelines" },
               ].map(({ href, icon: Icon, label, desc }) => (
                 <a
                   key={href}

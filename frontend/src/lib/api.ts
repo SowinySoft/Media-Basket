@@ -429,4 +429,24 @@ export const api = {
     getCategories: () => request<{ name: string; count: number }[]>("/marketplace/categories"),
     install: (name: string) => request<any>(`/marketplace/install/${name}`, { method: "POST" }),
   },
+  workflows: {
+    list: (orgId: string) => request<any[]>(`/orgs/${orgId}/workflows`),
+    get: (orgId: string, id: string) => request<any>(`/orgs/${orgId}/workflows/${id}`),
+    create: (orgId: string, data: any) =>
+      request<any>(`/orgs/${orgId}/workflows`, { method: "POST", body: JSON.stringify(data) }),
+    update: (orgId: string, id: string, data: any) =>
+      request<any>(`/orgs/${orgId}/workflows/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (orgId: string, id: string) =>
+      request<void>(`/orgs/${orgId}/workflows/${id}`, { method: "DELETE" }),
+    toggle: (orgId: string, id: string) =>
+      request<any>(`/orgs/${orgId}/workflows/${id}/toggle`, { method: "POST" }),
+    execute: (orgId: string, id: string, triggerData: any = {}) =>
+      request<any>(`/orgs/${orgId}/workflows/${id}/execute`, {
+        method: "POST",
+        body: JSON.stringify({ trigger_data: triggerData }),
+      }),
+    executions: (orgId: string, id: string) =>
+      request<any[]>(`/orgs/${orgId}/workflows/${id}/executions`),
+    templates: () => request<any[]>("/workflows/templates/list"),
+  },
 };
