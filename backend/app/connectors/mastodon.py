@@ -24,8 +24,8 @@ class MastodonManifest(ConnectorManifest):
     auth: dict = field(default_factory=lambda: {
         "type": "oauth2",
         "scopes": ["read", "write", "follow"],
-        "auth_url": "TODO",
-        "token_url": "TODO",
+        "auth_url": "https://mastodon.social/oauth/authorize",
+        "token_url": "https://mastodon.social/oauth/token",
     })
 
 
@@ -71,7 +71,14 @@ class MastodonConnector(ConnectorPlugin):
             return resp.json()
 
     async def refresh_token(self, refresh_token: str) -> dict:
-        return {}
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(f"{self.instance_url}/oauth/token", data={
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+            })
+            return resp.json()
 
     async def _api_call(self, token: str, endpoint: str, params: dict = None, method: str = "GET", json_data: dict = None) -> dict:
         async with httpx.AsyncClient() as client:

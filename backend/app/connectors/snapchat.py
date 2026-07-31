@@ -8,6 +8,7 @@ settings = get_settings()
 SNAPCHAT_AUTH_URL = "https://accounts.snap.com/auth/oauth2/authorize"
 SNAPCHAT_TOKEN_URL = "https://accounts.snap.com/auth/oauth2/token"
 SNAPCHAT_API_BASE = "https://adsapi.snapchat.com/v1"
+SNAPCHAT_STORY_API_BASE = "https://story-api.snapchat.com/v1"
 
 
 @dataclass
@@ -121,7 +122,14 @@ class SnapchatConnector(ConnectorPlugin):
         return {"error": f"Unknown action: {action}"}
 
     async def respond(self, content_id: str, message: str, token: str = None, **kwargs) -> None:
-        pass
+        """Snapchat Story API — create a text snap as a reply."""
+        if token:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{SNAPCHAT_STORY_API_BASE}/me/stories",
+                    json={"text": message, "reply_to": content_id},
+                    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                )
 
     def verify_webhook(self, signature: str, body: bytes) -> bool:
         return True

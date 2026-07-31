@@ -134,7 +134,16 @@ class PinterestConnector(ConnectorPlugin):
         return {"error": f"Unknown action: {action}"}
 
     async def respond(self, content_id: str, message: str, token: str = None, **kwargs) -> None:
-        pass
+        """Pinterest API v5 doesn't support comments directly.
+        We create a new pin referencing the original board as a 'save' action."""
+        if token:
+            board_id = kwargs.get("board_id", "me")
+            await self._api_call(token, "pins", method="POST", json_data={
+                "board_id": board_id,
+                "title": f"Re: {content_id}",
+                "description": message,
+                "link": kwargs.get("link", ""),
+            })
 
     def verify_webhook(self, signature: str, body: bytes) -> bool:
         return True

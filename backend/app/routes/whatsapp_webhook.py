@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse
 from app.core.config import get_settings
@@ -9,6 +11,16 @@ logger = get_logger("whatsapp_webhook")
 
 settings = get_settings()
 router = APIRouter()
+
+
+def _verify_hmac_signature(body: bytes, signature_header: str, app_secret: str) -> bool:
+    """Verify HMAC-SHA256 signature from Facebook/WhatsApp."""
+    if not signature_header or not app_secret:
+        return False
+    expected = "sha256=" + hmac.new(
+        app_secret.encode("utf-8"), body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature_header)
 
 
 @router.get("/webhook/whatsapp")
@@ -35,8 +47,18 @@ async def receive_whatsapp_message(
     """Webhook endpoint for receiving WhatsApp messages.
     
     Facebook sends POST requests when messages are received.
-    We store them in the database and can notify connected clients via WebSocket.
+    We verify the HMAC-SHA256 signature, store them in the database,
+    and notify connected clients via WebSocket.
     """
+    raw_body = await request.body()
+
+    # Verify HMAC signature
+    signature = request.headers.get("x-hub-signature-256", "")
+    if settings.WHATSAPP_APP_SECRET:
+        if not _verify_hmac_signature(raw_body, signature, settings.WHATSAPP_APP_SECRET):
+            logger.warning("webhook_hmac_verification_failed")
+            return PlainTextResponse(status_code=403, content="Invalid signature")
+
     body = await request.json()
     
     connector = get_connector("whatsapp")
@@ -44,7 +66,6 @@ async def receive_whatsapp_message(
         return {"status": "error"}
 
     # Parse the webhook payload
-    raw_body = await request.body()
     parsed = connector.parse_webhook(raw_body)
     
     if parsed.get("type") == "message":
@@ -53,7 +74,7 @@ async def receive_whatsapp_message(
         message_id = parsed.get("message_id")
         timestamp = parsed.get("timestamp")
 
-        print(f"WhatsApp message received: {from_number}: {message_text}")
+        logger.info("whatsapp_message_received", from_number=from_number, message_id=message_id)
         
         # TODO: Store message in database
         # TODO: Find service instance by phone_number_id
@@ -62,7 +83,7 @@ async def receive_whatsapp_message(
         return {"status": "ok"}
     
     elif parsed.get("type") == "status":
-        print(f"WhatsApp status update: {parsed.get('status')}")
+        logger.info("whatsapp_status_update", status=parsed.get("status"))
         return {"status": "ok"}
     
     return {"status": "ok"}

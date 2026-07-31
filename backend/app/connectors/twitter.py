@@ -1,3 +1,6 @@
+import hashlib
+import base64
+import secrets
 import httpx
 from dataclasses import dataclass, field
 from app.connectors.base import ConnectorPlugin, ConnectorManifest
@@ -8,6 +11,14 @@ settings = get_settings()
 TWITTER_AUTH_URL = "https://twitter.com/i/oauth2/authorize"
 TWITTER_TOKEN_URL = "https://api.twitter.com/2/oauth2/token"
 TWITTER_API_BASE = "https://api.twitter.com/2"
+
+
+def _generate_pkce_pair() -> tuple[str, str]:
+    """Generate a random PKCE code_verifier and its SHA256 code_challenge."""
+    code_verifier = secrets.token_urlsafe(32)
+    digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
+    code_challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+    return code_verifier, code_challenge
 
 
 @dataclass
@@ -38,6 +49,7 @@ class TwitterConnector(ConnectorPlugin):
         self.client_id = settings.TWITTER_CLIENT_ID if hasattr(settings, "TWITTER_CLIENT_ID") else ""
         self.client_secret = settings.TWITTER_CLIENT_SECRET if hasattr(settings, "TWITTER_CLIENT_SECRET") else ""
         self.redirect_uri = settings.TWITTER_REDIRECT_URI if hasattr(settings, "TWITTER_REDIRECT_URI") else "http://localhost:8000/api/v1/services/callback/twitter"
+        self._pkce_verifier: str = ""
 
     async def initialize(self, config: dict) -> None:
         self.client_id = config.get("client_id", self.client_id)
@@ -48,6 +60,8 @@ class TwitterConnector(ConnectorPlugin):
 
     def get_auth_url(self, state: str) -> str:
         scopes = " ".join(self.manifest.auth["scopes"])
+        code_verifier, code_challenge = _generate_pkce_pair()
+        self._pkce_verifier = code_verifier
         return (
             f"{TWITTER_AUTH_URL}"
             f"?client_id={self.client_id}"
@@ -55,7 +69,7 @@ class TwitterConnector(ConnectorPlugin):
             f"&scope={scopes}"
             f"&state={state}"
             f"&response_type=code"
-            f"&code_challenge=challenge"
+            f"&code_challenge={code_challenge}"
             f"&code_challenge_method=s256"
         )
 
@@ -68,7 +82,7 @@ class TwitterConnector(ConnectorPlugin):
                     "grant_type": "authorization_code",
                     "client_id": self.client_id,
                     "redirect_uri": self.redirect_uri,
-                    "code_verifier": "challenge",
+                    "code_verifier": self._pkce_verifier or "fallback",
                 },
                 auth=(self.client_id, self.client_secret),
             )
