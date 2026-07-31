@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import ThemeToggle from "@/components/ThemeToggle";
-import { ArrowLeft, Building2, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Building2, Save, Trash2, CreditCard, Users, Key, Settings, Puzzle, Bell, Clock, Database, ChevronRight } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -117,6 +117,36 @@ export default function OrgSettingsPage() {
                 <label className="block text-sm text-gray-400 mb-1">Organization ID</label>
                 <p className="text-gray-500 text-sm font-mono">{org?.id}</p>
               </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <h2 className="text-lg font-semibold mb-4">Settings</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { href: "/settings/services", icon: Settings, label: "Connected Services", desc: "Manage connected platforms" },
+                { href: "/settings/members", icon: Users, label: "Team Members", desc: "Invite and manage members" },
+                { href: "/settings/credentials", icon: Key, label: "Credentials", desc: "View encrypted vault" },
+                { href: "/settings/billing", icon: CreditCard, label: "Billing & Plan", desc: "Upgrade and usage" },
+                { href: "/settings/plugins", icon: Puzzle, label: "Connectors", desc: "Built-in connectors" },
+                { href: "/marketplace", icon: Puzzle, label: "Marketplace", desc: "Browse plugins" },
+                { href: "/settings/alerting", icon: Bell, label: "Alerting Rules", desc: "Configure alerts" },
+                { href: "/settings/retention", icon: Clock, label: "Data Retention", desc: "Cleanup policies" },
+                { href: "/settings/backup", icon: Database, label: "Backup & Restore", desc: "Data backup" },
+              ].map(({ href, icon: Icon, label, desc }) => (
+                <a
+                  key={href}
+                  href={href}
+                  className="flex items-center gap-3 p-3 bg-gray-700/50 hover:bg-gray-700 rounded-lg transition group"
+                >
+                  <Icon className="w-5 h-5 text-gray-400 group-hover:text-blue-400" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white">{label}</p>
+                    <p className="text-xs text-gray-400 truncate">{desc}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-300" />
+                </a>
+              ))}
             </div>
           </div>
 
