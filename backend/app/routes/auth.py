@@ -86,7 +86,8 @@ async def signup(data: UserCreate, response: Response, db: AsyncSession = Depend
     db.add(user)
     await db.flush()
 
-    slug = data.name.lower().replace(" ", "-").replace("'", "")[:50]
+    import re as _re
+    slug = _re.sub(r"[^a-z0-9]+", "-", data.name.lower().strip()).strip("-")[:50]
     org = Organization(name=f"{data.name}'s Organization", slug=slug)
     db.add(org)
     await db.flush()

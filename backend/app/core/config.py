@@ -128,6 +128,15 @@ class Settings(BaseSettings):
     MAX_MEMBERS_FREE: int = 5
     MAX_ML_ANALYSES_FREE: int = 1000
 
+    # Stripe
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_PRICE_PRO: str = ""
+    STRIPE_PRICE_ENTERPRISE: str = ""
+
+    # Frontend
+    FRONTEND_URL: str = "http://localhost:3000"
+
     class Config:
         env_file = ".env"
         case_sensitive = True

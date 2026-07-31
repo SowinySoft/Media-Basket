@@ -2,12 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
-from app.models.models import Member, User, Organization
+from app.core.config import get_settings
+from app.models.models import Member, User, Organization, Invitation
 from app.routes.auth import get_current_user
 from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+import secrets
 from app.core.logging import get_logger
 
 
@@ -23,6 +25,10 @@ class MemberInvite(BaseModel):
 
 class MemberRoleUpdate(BaseModel):
     role: str
+
+
+class AcceptInvite(BaseModel):
+    token: str
 
 
 class MemberResponseWithUser(BaseModel):
@@ -189,3 +195,96 @@ async def remove_member(
 
     await db.delete(member)
     await db.commit()
+
+
+@router.post("/invite")
+async def invite_member_via_email(
+    data: MemberInvite,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user["role"] not in ("owner", "admin"):
+        raise HTTPException(status_code=403, detail="Only owners and admins can invite members")
+
+    if data.role not in ("admin", "member", "viewer"):
+        raise HTTPException(status_code=400, detail="Invalid role. Must be admin, member, or viewer")
+
+    settings = get_settings()
+    token = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(days=7)
+
+    invitation = Invitation(
+        org_id=current_user["org_id"],
+        email=data.email,
+        role=data.role,
+        token=token,
+        invited_by=current_user["sub"],
+        accepted=False,
+        expires_at=expires_at,
+    )
+    db.add(invitation)
+    await db.commit()
+
+    invite_url = f"{settings.FRONTEND_URL}/accept-invite?token={token}"
+    logger.info(
+        "member_invited",
+        org_id=str(current_user["org_id"]),
+        email=data.email,
+        role=data.role,
+    )
+    return {"invite_url": invite_url, "email": data.email, "role": data.role}
+
+
+@router.post("/accept-invite")
+async def accept_invite(
+    data: AcceptInvite,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Invitation).where(Invitation.token == data.token)
+    )
+    invitation = result.scalar_one_or_none()
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+
+    if invitation.accepted:
+        raise HTTPException(status_code=400, detail="Invitation already accepted")
+
+    now = datetime.now(timezone.utc)
+    if invitation.expires_at.tzinfo is None:
+        expires_at = invitation.expires_at.replace(tzinfo=timezone.utc)
+    else:
+        expires_at = invitation.expires_at
+    if now > expires_at:
+        raise HTTPException(status_code=400, detail="Invitation has expired")
+
+    existing = await db.execute(
+        select(Member).where(
+            Member.org_id == invitation.org_id,
+            Member.user_id == current_user["sub"],
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Already a member of this organization")
+
+    member = Member(
+        org_id=invitation.org_id,
+        user_id=current_user["sub"],
+        role=invitation.role,
+    )
+    db.add(member)
+    invitation.accepted = True
+    await db.commit()
+
+    logger.info(
+        "invite_accepted",
+        org_id=str(invitation.org_id),
+        user_id=current_user["sub"],
+    )
+    return {
+        "detail": "Joined organization",
+        "org_id": str(invitation.org_id),
+        "role": invitation.role,
+    }
