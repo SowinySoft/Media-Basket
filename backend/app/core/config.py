@@ -6,7 +6,8 @@ class Settings(BaseSettings):
     # App
     APP_NAME: str = "Media Basket"
     APP_VERSION: str = "0.1.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
+    ENVIRONMENT: str = "development"
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/media_basket"
@@ -136,6 +137,13 @@ class Settings(BaseSettings):
 
     # Frontend
     FRONTEND_URL: str = "http://localhost:3000"
+
+    @property
+    def has_default_secrets(self) -> bool:
+        return (
+            self.JWT_SECRET_KEY == "dev-secret-change-in-production"
+            or self.VAULT_TOKEN == "dev-token-root"
+        )
 
     class Config:
         env_file = ".env"

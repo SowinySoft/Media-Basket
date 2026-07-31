@@ -24,8 +24,6 @@ async def export_csv(
     db=Depends(get_db),
 ):
     """Export content to CSV"""
-    import csv
-    import io
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
     from app.models.models import ContentItem, ServiceInstance
@@ -49,48 +47,48 @@ async def export_csv(
         query = query.where(ServiceInstance.connector_type == connector_type)
     
     result = await db.execute(query)
-    items = result.all()
     
-    # Create CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
-    
-    # Header
-    writer.writerow([
-        "ID", "External ID", "Content Type", "Connector Type",
-        "Title", "Body", "Likes", "Comments", "Shares", "Views",
-        "Sentiment", "Spam Score", "Created At"
-    ])
-    
-    # Data
-    for item, conn_type in items:
-        payload = item.payload or {}
-        meta = item.metadata_record
-        metadata = {
-            "sentiment": meta.sentiment if meta else "",
-            "spam_score": meta.spam_score if meta else 0,
-        }
+    # Streaming CSV
+    def generate_csv():
+        import csv
+        import io
         
+        # Header
+        header = io.StringIO()
+        writer = csv.writer(header)
         writer.writerow([
-            str(item.id),
-            item.external_id,
-            item.content_type,
-            conn_type,
-            payload.get("title", ""),
-            payload.get("body", "") or payload.get("text", "") or payload.get("message", ""),
-            payload.get("likes", 0),
-            payload.get("comments_count", 0) or payload.get("num_comments", 0),
-            payload.get("shares", 0) or payload.get("reblogs_count", 0),
-            payload.get("views", 0) or payload.get("viewCount", 0),
-            metadata.get("sentiment", ""),
-            metadata.get("spam_score", 0),
-            item.ingested_at.isoformat() if item.ingested_at else "",
+            "ID", "External ID", "Content Type", "Connector Type",
+            "Title", "Body", "Likes", "Comments", "Shares", "Views",
+            "Sentiment", "Spam Score", "Created At"
         ])
-    
-    output.seek(0)
+        yield header.getvalue()
+        
+        # Data rows
+        for chunk in result.yield_per(1000):
+            for item, conn_type in chunk:
+                payload = item.payload or {}
+                meta = item.metadata_record
+                row = io.StringIO()
+                writer = csv.writer(row)
+                writer.writerow([
+                    str(item.id),
+                    item.external_id,
+                    item.content_type,
+                    conn_type,
+                    payload.get("title", ""),
+                    payload.get("body", "") or payload.get("text", "") or payload.get("message", ""),
+                    payload.get("likes", 0),
+                    payload.get("comments_count", 0) or payload.get("num_comments", 0),
+                    payload.get("shares", 0) or payload.get("reblogs_count", 0),
+                    payload.get("views", 0) or payload.get("viewCount", 0),
+                    meta.sentiment if meta else "",
+                    meta.spam_score if meta else 0,
+                    item.ingested_at.isoformat() if item.ingested_at else "",
+                ])
+                yield row.getvalue()
     
     return StreamingResponse(
-        iter([output.getvalue()]),
+        generate_csv(),
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=mediabasket_export_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"}
     )
@@ -129,27 +127,34 @@ async def export_json(
         query = query.where(ServiceInstance.connector_type == connector_type)
     
     result = await db.execute(query)
-    items = result.all()
     
-    export_data = []
-    for item, conn_type in items:
-        meta = item.metadata_record
-        export_data.append({
-            "id": str(item.id),
-            "external_id": item.external_id,
-            "content_type": item.content_type,
-            "connector_type": conn_type,
-            "payload": item.payload,
-            "metadata": {
-                "sentiment": meta.sentiment,
-                "sentiment_score": meta.sentiment_score,
-                "flagged": meta.flagged,
-            } if meta else None,
-            "ingested_at": item.ingested_at.isoformat() if item.ingested_at else None,
-        })
+    def generate_json():
+        yield "[\n"
+        first = True
+        for chunk in result.yield_per(1000):
+            for item, conn_type in chunk:
+                meta = item.metadata_record
+                record = {
+                    "id": str(item.id),
+                    "external_id": item.external_id,
+                    "content_type": item.content_type,
+                    "connector_type": conn_type,
+                    "payload": item.payload,
+                    "metadata": {
+                        "sentiment": meta.sentiment,
+                        "sentiment_score": meta.sentiment_score,
+                        "flagged": meta.flagged,
+                    } if meta else None,
+                    "ingested_at": item.ingested_at.isoformat() if item.ingested_at else None,
+                }
+                if not first:
+                    yield ",\n"
+                first = False
+                yield json.dumps(record, indent=2)
+        yield "\n]"
     
     return StreamingResponse(
-        iter([json.dumps(export_data, indent=2)]),
+        generate_json(),
         media_type="application/json",
         headers={"Content-Disposition": f"attachment; filename=mediabasket_export_{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"}
     )

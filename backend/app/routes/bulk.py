@@ -38,28 +38,36 @@ async def bulk_moderate(
     member_id = current_user.get("member_id")
     results = {"processed": 0, "errors": 0}
 
-    for cid in req.content_ids:
-        try:
-            # Verify content belongs to org
-            result = await db.execute(
-                select(ContentItem).where(
-                    ContentItem.id == cid,
-                    ContentItem.org_id == org_id,
-                )
-            )
-            item = result.scalar_one_or_none()
-            if not item:
-                results["errors"] += 1
-                continue
+    # Batch-fetch all valid items in one query
+    result = await db.execute(
+        select(ContentItem).where(
+            ContentItem.id.in_(req.content_ids),
+            ContentItem.org_id == org_id,
+        )
+    )
+    items_by_id = {str(item.id): item for item in result.scalars().all()}
 
+    not_found_ids = set(req.content_ids) - set(items_by_id.keys())
+    results["errors"] += len(not_found_ids)
+
+    # Batch-fetch metadata for flag action
+    metadata_by_item_id = {}
+    if req.action == "flag" and items_by_id:
+        meta_result = await db.execute(
+            select(ContentMetadata).where(
+                ContentMetadata.content_item_id.in_(list(items_by_id.keys())),
+            )
+        )
+        metadata_by_item_id = {str(m.content_item_id): m for m in meta_result.scalars().all()}
+
+    for cid in req.content_ids:
+        item = items_by_id.get(cid)
+        if not item:
+            continue
+
+        try:
             if req.action == "flag":
-                # Upsert metadata
-                meta_result = await db.execute(
-                    select(ContentMetadata).where(
-                        ContentMetadata.content_item_id == cid,
-                    )
-                )
-                meta = meta_result.scalar_one_or_none()
+                meta = metadata_by_item_id.get(cid)
                 if meta:
                     meta.flagged = True
                     meta.flag_reasons = req.details.get("reasons", []) if req.details else []
@@ -104,22 +112,16 @@ async def bulk_publish(
     org_id = current_user["org_id"]
     results = {"queued": 0, "errors": 0}
 
-    for cid in req.content_ids:
-        try:
-            result = await db.execute(
-                select(ContentItem).where(
-                    ContentItem.id == cid,
-                    ContentItem.org_id == org_id,
-                )
-            )
-            item = result.scalar_one_or_none()
-            if not item:
-                results["errors"] += 1
-                continue
+    # Batch-fetch all valid items in one query
+    result = await db.execute(
+        select(ContentItem).where(
+            ContentItem.id.in_(req.content_ids),
+            ContentItem.org_id == org_id,
+        )
+    )
+    found_ids = {str(item.id) for item in result.scalars().all()}
 
-            # Queue for publishing (in real app, this would be a Celery task)
-            results["queued"] += 1
-        except Exception:
-            results["errors"] += 1
+    results["queued"] = len(found_ids)
+    results["errors"] = len(req.content_ids) - len(found_ids)
 
     return results

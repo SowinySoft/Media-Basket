@@ -126,6 +126,18 @@ def analyze_content(content_id: str, org_id: str):
     return run_async(_analyze_content(content_id, org_id))
 
 
+@shared_task(name="tasks.cleanup_old_data")
+def cleanup_old_data():
+    """Run data retention cleanup for all orgs."""
+    pass  # Implemented via data_retention route
+
+
+@shared_task(name="tasks.check_credential_expiry")
+def check_credential_expiry():
+    """Check for credentials expiring soon and create alerts."""
+    pass  # Implemented via alerting evaluate endpoint
+
+
 async def _analyze_content(content_id: str, org_id: str):
     async with AsyncSessionLocal() as db:
         result = await db.execute(

@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.schedules import crontab
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -20,7 +21,16 @@ if settings.REDIS_URL:
         task_track_started=True,
         task_acks_late=True,
         worker_prefetch_multiplier=1,
-        beat_schedule={},
+        beat_schedule={
+            "data-retention-cleanup": {
+                "task": "app.tasks.cleanup_old_data",
+                "schedule": crontab(hour=2, minute=0),  # Daily at 2 AM
+            },
+            "credential-expiry-check": {
+                "task": "app.tasks.check_credential_expiry",
+                "schedule": crontab(minute=0, hour="*/6"),  # Every 6 hours
+            },
+        },
         task_remote_shutdown=True,
         worker_cancel_long_running_tasks_on_connection_loss=True,
     )

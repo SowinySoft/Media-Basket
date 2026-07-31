@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+"""Service management API — connect, list, and manage social media services."""
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
@@ -38,6 +39,8 @@ async def list_services(
     org_id: str,
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
 ):
     if current_user["org_id"] != org_id:
         raise HTTPException(status_code=403, detail="Access denied")
@@ -46,6 +49,8 @@ async def list_services(
         select(ServiceInstance)
         .where(ServiceInstance.org_id == org_id)
         .order_by(ServiceInstance.created_at.desc())
+        .offset(offset)
+        .limit(limit)
     )
     return result.scalars().all()
 

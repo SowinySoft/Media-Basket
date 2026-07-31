@@ -50,11 +50,15 @@ class ExecuteRequest(BaseModel):
 async def list_workflows(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
 ):
     result = await db.execute(
         select(Workflow)
         .where(Workflow.org_id == current_user["org_id"])
         .order_by(Workflow.created_at.desc())
+        .offset(offset)
+        .limit(limit)
     )
     return [_to_dict(w) for w in result.scalars().all()]
 

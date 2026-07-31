@@ -7,7 +7,7 @@ from typing import Optional
 from datetime import datetime, timedelta, timezone
 from app.routes.auth import get_current_user
 from app.core.database import get_db
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.models.models import AuditLog, User, Member
 from app.core.logging import get_logger
 
@@ -102,19 +102,23 @@ async def get_audit_stats(
     org_id = current_user["org_id"]
     start_date = datetime.now(timezone.utc) - timedelta(days=days)
 
-    result = await db.execute(
-        select(AuditLog.action)
+    # Total count
+    total_result = await db.execute(
+        select(func.count(AuditLog.id))
         .where(AuditLog.org_id == org_id, AuditLog.timestamp >= start_date)
     )
-    actions = [row[0] for row in result.all()]
+    total = total_result.scalar() or 0
 
-    # Count by action
-    action_counts = {}
-    for a in actions:
-        action_counts[a] = action_counts.get(a, 0) + 1
+    # Group by action in SQL
+    action_result = await db.execute(
+        select(AuditLog.action, func.count(AuditLog.id))
+        .where(AuditLog.org_id == org_id, AuditLog.timestamp >= start_date)
+        .group_by(AuditLog.action)
+    )
+    action_counts = {row[0]: row[1] for row in action_result.all()}
 
     return {
-        "total": len(actions),
+        "total": total,
         "by_action": action_counts,
         "period_days": days,
     }

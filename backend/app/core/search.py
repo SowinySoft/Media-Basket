@@ -5,6 +5,7 @@ Unified search across all connected services
 from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
+from app.core.cache import cached
 
 
 class SearchFilters(BaseModel):
@@ -99,6 +100,7 @@ class CrossPlatformSearch:
             filters_applied=filters.model_dump(exclude_none=True),
         )
     
+    @cached(ttl=60)
     async def aggregate(self, org_id: str) -> dict:
         """Get aggregate stats across all services"""
         from sqlalchemy import select, func

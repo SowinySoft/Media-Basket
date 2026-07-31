@@ -3,6 +3,9 @@ import json
 from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from app.core.config import get_settings
+from app.core.logging import get_logger
+
+logger = get_logger("security")
 
 settings = get_settings()
 
@@ -21,7 +24,7 @@ try:
     if settings.REDIS_URL:
         _redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
 except Exception:
-    pass
+    logger.warning("security_redis_init_failed")
 
 
 def hash_password(password: str) -> str:
@@ -72,7 +75,7 @@ def blacklist_token(token: str) -> None:
             if ttl > 0:
                 _redis_client.setex(f"blacklist:{token}", ttl, "1")
         except Exception:
-            pass
+            logger.warning("security_redis_blacklist_store_failed")
 
 
 def is_token_blacklisted(token: str) -> bool:
@@ -83,5 +86,5 @@ def is_token_blacklisted(token: str) -> bool:
         try:
             return _redis_client.exists(f"blacklist:{token}") == 1
         except Exception:
-            pass
+            logger.warning("security_redis_blacklist_check_failed")
     return False

@@ -1,7 +1,18 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from uuid import UUID
 from datetime import datetime
 from typing import Optional
+
+
+# Current user (used by dependencies)
+class CurrentUser(BaseModel):
+    sub: str
+    org_id: str
+    member_id: str | None = None
+    role: str = "member"
+
+    class Config:
+        from_attributes = True
 
 
 # Auth
@@ -9,6 +20,13 @@ class UserCreate(BaseModel):
     email: str
     password: str
     name: str
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
 
 
 class UserLogin(BaseModel):

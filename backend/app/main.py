@@ -20,6 +20,7 @@ from app.routes import (
     calendar, tasks, approval, audit, alerts, roi, suggestions, dashboards,
     webhooks_builder, ab_testing, competitors, org, members, plugins,
     inbox, data_retention, alerting, pgaudit, admin, marketplace, workflows,
+    gdpr,
 )
 from app.middleware.tenant import TenantMiddleware
 from app.middleware.csrf import CSRFMiddleware, SecurityHeadersMiddleware
@@ -34,8 +35,16 @@ logger = get_logger("main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("starting_up", app_version=settings.APP_VERSION)
+    if settings.has_default_secrets and settings.ENVIRONMENT == "production":
+        logger.critical(
+            "running_with_default_secrets",
+            message="CHANGE JWT_SECRET_KEY and VAULT_TOKEN before production!",
+        )
     yield
     logger.info("shutting_down")
+    from app.core.database import engine
+    await engine.dispose()
+    logger.info("shutdown_complete")
 
 
 app = FastAPI(
@@ -43,8 +52,8 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description="MediaBasket - Unified Social Media Management Platform",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
 )
 
 
@@ -210,6 +219,7 @@ app.include_router(pgaudit.router, prefix="/api/v1/orgs/{org_id}/audit", tags=["
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(marketplace.router, prefix="/api/v1/marketplace", tags=["marketplace"])
 app.include_router(workflows.router, prefix="/api/v1/orgs/{org_id}/workflows", tags=["workflows"])
+app.include_router(gdpr.router, prefix="/api/v1/orgs/{org_id}", tags=["gdpr"])
 
 
 @app.get("/")

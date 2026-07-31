@@ -45,10 +45,32 @@ async def get_db_with_tenant(request=None) -> AsyncSession:
     """
     async with AsyncSessionLocal() as session:
         try:
-            # Set tenant context from request state (set by TenantMiddleware)
             org_id = None
             if request and hasattr(request, "state"):
                 org_id = getattr(request.state, "org_id", None)
+            if org_id:
+                from sqlalchemy import text
+                await session.execute(
+                    text("SET LOCAL app.current_tenant = :org_id"), {"org_id": org_id}
+                )
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+async def get_db_with_request(request, db=None) -> AsyncSession:
+    """FastAPI dependency that provides a DB session with tenant context set.
+
+    Usage:
+        db = Depends(get_db_with_request)
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            org_id = getattr(request.state, "org_id", None)
             if org_id:
                 from sqlalchemy import text
                 await session.execute(

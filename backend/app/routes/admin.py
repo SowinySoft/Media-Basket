@@ -94,7 +94,7 @@ async def system_health(
         await db.execute(text("SELECT 1"))
         db_ok = True
     except Exception:
-        db_ok = False
+        logger.exception("admin_redis_check_failed")
 
     # Check Redis
     redis_ok = False
@@ -109,7 +109,7 @@ async def system_health(
             redis_ok = True
             await r.close()
     except Exception:
-        pass
+        logger.exception("admin_redis_check_failed")
 
     # Check pgAudit
     pgaudit_ok = False
@@ -117,7 +117,7 @@ async def system_health(
         result = await db.execute(text("SELECT 1 FROM pg_extension WHERE extname = 'pgaudit'"))
         pgaudit_ok = result.scalar() is not None
     except Exception:
-        pass
+        logger.exception("admin_pgaudit_check_failed")
 
     return {
         "database": "ok" if db_ok else "error",

@@ -5,6 +5,7 @@ Cross-platform analytics and insights
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from pydantic import BaseModel
+from app.core.cache import cached
 
 
 class TimeRange(BaseModel):
@@ -57,6 +58,7 @@ class AnalyticsEngine:
     def __init__(self, db_session):
         self.db = db_session
     
+    @cached(ttl=60)
     async def get_summary(self, org_id: str, time_range: TimeRange = None) -> AnalyticsSummary:
         """Get summary analytics across all platforms"""
         if not time_range:
@@ -138,6 +140,7 @@ class AnalyticsEngine:
             flagged_content=flagged_content,
         )
     
+    @cached(ttl=60)
     async def get_connector_analytics(self, org_id: str, connector_type: str, time_range: TimeRange = None) -> ConnectorAnalytics:
         """Get analytics for a specific connector"""
         if not time_range:

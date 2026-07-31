@@ -10,10 +10,11 @@ import hmac
 import json
 from datetime import datetime, timezone
 from app.routes.auth import get_current_user
-from app.core.database import get_db
+from app.core.database import get_db_with_request
 from sqlalchemy import select
 from app.models.models import Webhook
 from app.core.logging import get_logger
+from app.core.ssrf_guard import validate_url, safe_post
 
 
 logger = get_logger("webhooks_builder")
@@ -54,7 +55,7 @@ async def list_event_types():
 @router.get("")
 async def list_webhooks(
     current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
+    db=Depends(get_db_with_request),
 ):
     org_id = current_user["org_id"]
     result = await db.execute(
@@ -78,8 +79,10 @@ async def list_webhooks(
 async def create_webhook(
     webhook: WebhookCreate,
     current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
+    db=Depends(get_db_with_request),
 ):
+    if not validate_url(webhook.url):
+        raise HTTPException(status_code=400, detail="URL blocked: private/internal addresses not allowed")
     org_id = current_user["org_id"]
     new_webhook = Webhook(
         org_id=org_id,
@@ -99,7 +102,7 @@ async def update_webhook(
     webhook_id: str,
     webhook: WebhookUpdate,
     current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
+    db=Depends(get_db_with_request),
 ):
     org_id = current_user["org_id"]
     result = await db.execute(
@@ -110,6 +113,8 @@ async def update_webhook(
         raise HTTPException(status_code=404, detail="Webhook not found")
 
     if webhook.url is not None:
+        if not validate_url(webhook.url):
+            raise HTTPException(status_code=400, detail="URL blocked: private/internal addresses not allowed")
         existing.url = webhook.url
     if webhook.events is not None:
         existing.events = webhook.events
@@ -126,7 +131,7 @@ async def update_webhook(
 async def delete_webhook(
     webhook_id: str,
     current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
+    db=Depends(get_db_with_request),
 ):
     org_id = current_user["org_id"]
     result = await db.execute(
@@ -145,7 +150,7 @@ async def delete_webhook(
 async def test_webhook(
     webhook_id: str,
     current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
+    db=Depends(get_db_with_request),
 ):
     org_id = current_user["org_id"]
     result = await db.execute(
@@ -155,7 +160,6 @@ async def test_webhook(
     if not webhook:
         raise HTTPException(status_code=404, detail="Webhook not found")
 
-    import httpx
     payload = {
         "event": "webhook.test",
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -172,8 +176,7 @@ async def test_webhook(
         headers["X-Webhook-Signature"] = sig
 
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(webhook.url, json=payload, headers=headers)
-            return {"ok": resp.status_code < 400, "status_code": resp.status_code}
+        resp = await safe_post(webhook.url, json=payload, headers=headers)
+        return {"ok": resp.status_code < 400, "status_code": resp.status_code}
     except Exception as e:
         return {"ok": False, "error": str(e)}

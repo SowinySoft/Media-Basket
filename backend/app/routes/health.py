@@ -20,6 +20,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         checks["database"] = "healthy"
     except Exception:
         checks["database"] = "unhealthy"
+        logger.exception("health_db_check_failed")
 
     if settings.REDIS_URL:
         try:
@@ -29,6 +30,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
             checks["redis"] = "healthy"
         except Exception:
             checks["redis"] = "unavailable (non-critical)"
+            logger.warning("health_redis_check_failed")
     else:
         checks["redis"] = "not configured (non-critical)"
 
