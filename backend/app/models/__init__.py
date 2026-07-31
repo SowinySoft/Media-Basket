@@ -26,6 +26,7 @@ from app.models.models import (
     Plugin,
     Notification,
 )
+from app.models.connector_type import ConnectorType
 
 __all__ = [
     "Organization",
@@ -54,4 +55,5 @@ __all__ = [
     "SyncJob",
     "Plugin",
     "Notification",
+    "ConnectorType",
 ]

@@ -1,5 +1,5 @@
-#!/bin/bash
-# Automated daily backup script — Gap 21
+#!/usr/bin/env bash
+# Automated daily backup script — Gap 21 + Gap 30 (shebang first)
 # Usage: ./backup.sh [--compress] [--encrypt]
 # Cron: 0 2 * * * /path/to/backup.sh >> /var/log/mediabasket-backup.log 2>&1
 
@@ -27,7 +27,7 @@ pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
 
 echo "[$(date)] Database dump complete: ${BACKUP_NAME}.dump"
 
-# Optional compression (double compresses the custom format for extra savings)
+# Optional compression
 if [[ "${1:-}" == "--compress" ]]; then
     gzip "$BACKUP_DIR/${BACKUP_NAME}.dump"
     echo "[$(date)] Compressed: ${BACKUP_NAME}.dump.gz"

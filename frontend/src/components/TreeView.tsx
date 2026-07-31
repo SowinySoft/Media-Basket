@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState, useCallback } from "react";
 import { Tree } from "react-arborist";
 import { useStore } from "@/lib/store";
 import { FileText, MessageSquare, Video, MessageCircle, ChevronRight, RefreshCw, Send, Image, Twitter, AtSign, Facebook, Briefcase } from "lucide-react";
+import TreeContextMenu from "./TreeContextMenu";
+import TreeNodeBadge from "./TreeNodeBadge";
 
 interface TreeNode {
   id: string;
@@ -13,6 +15,8 @@ interface TreeNode {
   contentType?: string;
   children?: TreeNode[];
   data?: any;
+  badge?: number;
+  badgeType?: "notification" | "unread" | "flagged";
 }
 
 const connectorIcons: Record<string, string> = {
@@ -70,11 +74,22 @@ function NodeRenderer({ node, style, dragHandle }: any) {
     setSyncing(false);
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Dispatch custom event for context menu
+    const event = new CustomEvent("tree-context-menu", {
+      detail: { x: e.clientX, y: e.clientY, node: node.data },
+    });
+    document.dispatchEvent(event);
+  };
+
   return (
     <div
       ref={dragHandle}
       style={style}
       className="flex items-center gap-2 px-2 py-1 hover:bg-gray-700 cursor-pointer group"
+      onContextMenu={handleContextMenu}
     >
       {isService ? (
         <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -82,6 +97,12 @@ function NodeRenderer({ node, style, dragHandle }: any) {
         Icon && <Icon className={`w-4 h-4 ${sentimentColor}`} />
       )}
       <span className="flex-1 truncate text-sm">{node.data.name}</span>
+
+      {/* Badge */}
+      {node.data.badge > 0 && (
+        <TreeNodeBadge count={node.data.badge} type={node.data.badgeType || "notification"} />
+      )}
+
       {isService && (
         <>
           <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100">
@@ -114,7 +135,10 @@ export default function TreeView() {
     setSelectedContent,
     fetchServices,
     fetchContent,
+    syncService,
   } = useStore();
+
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: any } | null>(null);
 
   useEffect(() => {
     fetchServices();
@@ -126,12 +150,53 @@ export default function TreeView() {
     }
   }, [selectedServiceId]);
 
+  // Context menu listener
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent;
+      setContextMenu({ x: ce.detail.x, y: ce.detail.y, node: ce.detail.node });
+    };
+    document.addEventListener("tree-context-menu", handler);
+    return () => document.removeEventListener("tree-context-menu", handler);
+  }, []);
+
+  const handleContextAction = useCallback((action: string, node: any) => {
+    switch (action) {
+      case "sync":
+        syncService(node.id, node.connectorType);
+        break;
+      case "view_content":
+        setSelectedService(node.id);
+        break;
+      case "open_settings":
+        window.location.href = "/settings/services";
+        break;
+      case "view":
+        setSelectedContent(node.id);
+        break;
+      case "copy_id":
+        navigator.clipboard.writeText(node.id);
+        break;
+      case "disconnect":
+        if (confirm(`Disconnect ${node.name}?`)) {
+          // TODO: call api.services.delete
+        }
+        break;
+      case "approve":
+      case "flag":
+      case "delete":
+        // TODO: call moderation API
+        break;
+    }
+  }, [syncService, setSelectedService, setSelectedContent]);
+
   const treeData = useMemo(() => {
     const serviceNodes: TreeNode[] = services.map((service) => {
       const serviceContent = content.filter(
         (c) => c.service_instance_id === service.id
       );
 
+      const flaggedCount = serviceContent.filter((c) => c.flagged).length;
       const contentByType: Record<string, TreeNode[]> = {};
       serviceContent.forEach((item) => {
         const type = item.content_type;
@@ -144,6 +209,8 @@ export default function TreeView() {
           type: "content",
           contentType: item.content_type,
           data: item,
+          badge: item.flagged ? 1 : 0,
+          badgeType: item.flagged ? "flagged" : undefined,
         });
       });
 
@@ -166,6 +233,8 @@ export default function TreeView() {
         connectorType: service.connector_type,
         children: children.length > 0 ? children : undefined,
         data: service,
+        badge: flaggedCount,
+        badgeType: flaggedCount > 0 ? "flagged" as const : undefined,
       };
     });
 
@@ -228,6 +297,16 @@ export default function TreeView() {
       >
         {NodeRenderer}
       </Tree>
+
+      {contextMenu && (
+        <TreeContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          node={contextMenu.node}
+          onClose={() => setContextMenu(null)}
+          onAction={handleContextAction}
+        />
+      )}
     </div>
   );
 }

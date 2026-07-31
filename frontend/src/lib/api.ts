@@ -411,4 +411,9 @@ export const api = {
       }),
     events: () => request<string[]>("/webhooks/events"),
   },
+  admin: {
+    getStats: () => request<any>("/admin/stats"),
+    getHealth: () => request<any>("/admin/health"),
+    getUsers: () => request<any[]>("/admin/users"),
+  },
 };
