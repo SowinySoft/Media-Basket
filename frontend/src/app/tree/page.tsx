@@ -3,11 +3,13 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store";
+import { api } from "@/lib/api";
 import TreeView from "@/components/TreeView";
 import ContentDetail from "@/components/ContentDetail";
 import AddServiceModal from "@/components/AddServiceModal";
 import ThemeToggle from "@/components/ThemeToggle";
 import MobileNav from "@/components/MobileNav";
+import BottomNav from "@/components/BottomNav";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Search, Plus, RefreshCw, LogOut, Settings, Inbox, BarChart3, Shield } from "lucide-react";
 
@@ -32,6 +34,7 @@ function TreePageInner() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useKeyboardShortcuts([
     { key: "k", ctrl: true, action: () => { document.querySelector<HTMLInputElement>("[placeholder='Search content...']")?.focus(); }, description: "Quick Search" },
@@ -58,6 +61,14 @@ function TreePageInner() {
       await fetchUser();
       await fetchServices();
       await fetchContent();
+      // Fetch unread notification count
+      try {
+        const orgId = useStore.getState().org?.id;
+        if (orgId) {
+          const stats = await api.inbox.stats(orgId);
+          setUnreadCount(stats.unread);
+        }
+      } catch {}
       setIsLoading(false);
     };
 
@@ -248,7 +259,7 @@ function TreePageInner() {
       </aside>
 
       {/* Main content */}
-      <div className={`flex-1 bg-gray-900 ${isMobile ? "pt-24" : ""}`}>
+      <div className={`flex-1 bg-gray-900 ${isMobile ? "pt-24 pb-16" : ""}`}>
         {selectedContentId ? (
           <ContentDetail />
         ) : (
@@ -260,6 +271,9 @@ function TreePageInner() {
           </div>
         )}
       </div>
+
+      {/* Mobile bottom nav */}
+      <BottomNav unreadCount={unreadCount} />
     </main>
   );
 }

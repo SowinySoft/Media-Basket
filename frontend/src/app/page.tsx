@@ -7,12 +7,20 @@ export default function Home() {
       <p className="text-lg sm:text-xl text-gray-400 text-center">
         All your media accounts in one basket
       </p>
-      <a
-        href="/login"
-        className="mt-8 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-center"
-      >
-        Get Started
-      </a>
+      <div className="mt-8 flex flex-col sm:flex-row gap-4">
+        <a
+          href="/login"
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-center"
+        >
+          Get Started
+        </a>
+        <a
+          href="/dashboard"
+          className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition text-center"
+        >
+          Dashboard
+        </a>
+      </div>
     </main>
   );
 }
