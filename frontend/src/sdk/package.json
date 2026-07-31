@@ -1,0 +1,17 @@
+{
+  "name": "@mediabasket/connector-sdk",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for building MediaBasket connectors/plugins",
+  "main": "dist/connector.js",
+  "types": "dist/connector.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  },
+  "license": "MIT",
+  "keywords": ["mediabasket", "connector", "plugin", "social-media"]
+}

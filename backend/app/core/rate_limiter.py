@@ -1,150 +1,106 @@
-"""
-Rate Limiting Middleware
-Prevent API abuse and ensure fair usage
-"""
+"""Rate Limiting Middleware with per-connector tracking and Prometheus metrics."""
 import time
 from collections import defaultdict
 from typing import Optional
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
+from app.core.logging import get_logger
+from app.core.metrics import rate_limit_remaining, rate_limit_total
+
+logger = get_logger("rate_limiter")
 
 
 class RateLimiter:
-    """In-memory rate limiter using sliding window"""
-    
+    """In-memory rate limiter using sliding window."""
+
     def __init__(self):
         self._requests: dict[str, list[float]] = defaultdict(list)
         self._limits: dict[str, tuple[int, int]] = {}  # path -> (max_requests, window_seconds)
-    
+
     def set_limit(self, path: str, max_requests: int, window_seconds: int = 60):
-        """Set rate limit for a path"""
         self._limits[path] = (max_requests, window_seconds)
-    
+
     def get_limit(self, path: str) -> Optional[tuple[int, int]]:
-        """Get rate limit for a path"""
-        # Check exact match first
         if path in self._limits:
             return self._limits[path]
-        
-        # Check prefix match
-        for pattern, limit in self._limits.items():
-            if path.startswith(pattern):
+        for prefix, limit in self._limits.items():
+            if path.startswith(prefix):
                 return limit
-        
-        return None
-    
-    def is_rate_limited(self, key: str, max_requests: int, window_seconds: int) -> tuple[bool, dict]:
-        """Check if request is rate limited"""
+        return (100, 60)
+
+    def is_rate_limited(self, client_id: str, path: str) -> tuple[bool, int, float]:
+        """Check rate limit. Returns (is_limited, remaining, retry_after_seconds)."""
+        limit = self.get_limit(path)
+        if not limit:
+            return False, 100, 0
+
+        max_requests, window = limit
         now = time.time()
-        cutoff = now - window_seconds
-        
-        # Clean old requests
-        self._requests[key] = [t for t in self._requests[key] if t > cutoff]
-        
-        # Check limit
-        current_count = len(self._requests[key])
-        is_limited = current_count >= max_requests
-        
-        # Add current request
-        if not is_limited:
-            self._requests[key].append(now)
-        
-        return is_limited, {
-            "limit": max_requests,
-            "remaining": max(0, max_requests - current_count),
-            "reset": int(cutoff + window_seconds),
-        }
+        cutoff = now - window
+
+        # Clean old entries
+        self._requests[client_id] = [t for t in self._requests[client_id] if t > cutoff]
+
+        current = len(self._requests[client_id])
+        remaining = max(0, max_requests - current)
+
+        if current >= max_requests:
+            oldest = self._requests[client_id][0]
+            retry_after = oldest + window - now
+            return True, 0, max(0, retry_after)
+
+        self._requests[client_id].append(now)
+        return False, remaining - 1, 0
+
+
+rate_limiter = RateLimiter()
+
+# Default limits
+rate_limiter.set_limit("/api/v1/auth", 10, 60)
+rate_limiter.set_limit("/api/v1/orgs", 50, 60)
+rate_limiter.set_limit("/api/v1/services/webhook", 200, 60)
+rate_limiter.set_limit("/api/v1", 100, 60)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Rate limiting middleware"""
-    
-    def __init__(self, app, limiter: RateLimiter = None):
-        super().__init__(app)
-        self.limiter = limiter or RateLimiter()
-        self._setup_defaults()
-    
-    def _setup_defaults(self):
-        """Setup default rate limits"""
-        # Auth endpoints - stricter limits
-        self.limiter.set_limit("/api/v1/auth", 10, 60)  # 10 requests per minute
-        
-        # General API endpoints
-        self.limiter.set_limit("/api/v1", 100, 60)  # 100 requests per minute
-        
-        # Search and analytics - moderate limits
-        self.limiter.set_limit("/api/v1/orgs", 50, 60)  # 50 requests per minute
-        
-        # Webhook endpoints - higher limits
-        self.limiter.set_limit("/api/v1/services/webhook", 200, 60)  # 200 requests per minute
-    
     async def dispatch(self, request: Request, call_next):
-        """Process request through rate limiter"""
-        # Skip rate limiting for health checks
-        if request.url.path.startswith("/api/v1/health"):
+        path = request.url.path
+
+        # Exempt health checks and metrics
+        if path in ("/api/v1/health", "/metrics"):
             return await call_next(request)
-        
-        # Get client identifier
-        client_id = self._get_client_id(request)
-        
-        # Get rate limit for path
-        limit = self.limiter.get_limit(request.url.path)
-        if not limit:
-            return await call_next(request)
-        
-        max_requests, window_seconds = limit
-        
-        # Check rate limit
-        is_limited, info = self.limiter.is_rate_limited(
-            f"{client_id}:{request.url.path}",
-            max_requests,
-            window_seconds
-        )
-        
+
+        # Determine client ID
+        client_id = "anonymous"
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            client_id = auth_header[7:20]
+        elif request.headers.get("x-api-key"):
+            client_id = request.headers["x-api-key"][:20]
+        elif request.headers.get("x-forwarded-for"):
+            client_id = request.headers["x-forwarded-for"].split(",")[0].strip()
+        else:
+            client_id = request.client.host if request.client else "unknown"
+
+        is_limited, remaining, retry_after = rate_limiter.is_rate_limited(client_id, path)
+
+        # Update Prometheus gauge
+        rate_limit_remaining.labels(client_id=client_id[:16], path=path).set(remaining)
+
         if is_limited:
+            rate_limit_total.labels(client_id=client_id[:16], path=path).inc()
+            logger.warning("rate_limit_exceeded", client_id=client_id[:16], path=path)
             return Response(
-                content='{"error": "Rate limit exceeded", "retry_after": ' + str(info["reset"] - int(time.time())) + '}',
+                content='{"detail":"Rate limit exceeded"}',
                 status_code=429,
-                media_type="application/json",
                 headers={
-                    "X-RateLimit-Limit": str(info["limit"]),
-                    "X-RateLimit-Remaining": str(info["remaining"]),
-                    "X-RateLimit-Reset": str(info["reset"]),
-                    "Retry-After": str(max(1, info["reset"] - int(time.time()))),
-                }
+                    "Retry-After": str(int(retry_after)),
+                    "X-RateLimit-Limit": str(rate_limiter.get_limit(path)[0]),
+                    "X-RateLimit-Remaining": "0",
+                },
             )
-        
-        # Process request
+
         response = await call_next(request)
-        
-        # Add rate limit headers
-        response.headers["X-RateLimit-Limit"] = str(info["limit"])
-        response.headers["X-RateLimit-Remaining"] = str(info["remaining"])
-        response.headers["X-RateLimit-Reset"] = str(info["reset"])
-        
+        response.headers["X-RateLimit-Remaining"] = str(remaining)
         return response
-    
-    def _get_client_id(self, request: Request) -> str:
-        """Get client identifier for rate limiting"""
-        # Use API key if present
-        api_key = request.headers.get("X-API-Key")
-        if api_key:
-            return f"apikey:{api_key}"
-        
-        # Use auth token if present
-        auth = request.headers.get("Authorization")
-        if auth and auth.startswith("Bearer "):
-            token = auth[7:]
-            return f"token:{token[:16]}..."
-        
-        # Fall back to IP
-        forwarded = request.headers.get("X-Forwarded-For")
-        if forwarded:
-            return f"ip:{forwarded.split(',')[0]}"
-        
-        return f"ip:{request.client.host}"
-
-
-# Global rate limiter instance
-rate_limiter = RateLimiter()

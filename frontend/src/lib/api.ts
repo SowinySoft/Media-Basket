@@ -1,27 +1,28 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
-function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("access_token");
-}
-
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = getToken();
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...options.headers,
   };
 
-  if (token) {
-    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+  // Cookie-based auth: browser sends httpOnly cookies automatically.
+  // No need to read from localStorage — the server sets access_token cookie on login.
+  // For WS or manual token usage, still support localStorage fallback.
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+    }
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
+    credentials: "include", // send cookies cross-origin
   });
 
   if (!res.ok) {
@@ -49,6 +50,71 @@ export const api = {
         body: JSON.stringify({ email, password, name }),
       }),
     me: () => request<any>("/auth/me"),
+    logout: () => request<any>("/auth/logout", { method: "POST" }),
+    refresh: () =>
+      request<{ access_token: string; refresh_token: string }>("/auth/refresh", {
+        method: "POST",
+      }),
+  },
+  inbox: {
+    list: (orgId: string, params?: { type?: string; unread_only?: boolean; limit?: number; offset?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.type) q.set("type", params.type);
+      if (params?.unread_only) q.set("unread_only", "true");
+      if (params?.limit) q.set("limit", String(params.limit));
+      if (params?.offset) q.set("offset", String(params.offset));
+      const qs = q.toString();
+      return request<{ items: any[]; total: number; unread: number }>(
+        `/orgs/${orgId}/notifications${qs ? `?${qs}` : ""}`
+      );
+    },
+    stats: (orgId: string) =>
+      request<{ total: number; unread: number; by_type: Record<string, number> }>(
+        `/orgs/${orgId}/notifications/stats`
+      ),
+    markRead: (orgId: string, notificationId: string) =>
+      request<any>(`/orgs/${orgId}/notifications/${notificationId}/read`, {
+        method: "POST",
+      }),
+    markAllRead: (orgId: string) =>
+      request<any>(`/orgs/${orgId}/notifications/read-all`, {
+        method: "POST",
+      }),
+  },
+  retention: {
+    cleanup: (orgId: string, params?: { content_days?: number; audit_days?: number; dry_run?: boolean }) => {
+      const q = new URLSearchParams();
+      if (params?.content_days) q.set("content_days", String(params.content_days));
+      if (params?.audit_days) q.set("audit_days", String(params.audit_days));
+      if (params?.dry_run) q.set("dry_run", "true");
+      const qs = q.toString();
+      return request<{ dry_run: boolean; summary: Record<string, number> }>(
+        `/orgs/${orgId}/retention/cleanup${qs ? `?${qs}` : ""}`,
+        { method: "POST" }
+      );
+    },
+  },
+  alerting: {
+    listRules: (orgId: string) => request<any[]>(`/orgs/${orgId}/alerting/rules`),
+    createRule: (orgId: string, data: any) =>
+      request<any>(`/orgs/${orgId}/alerting/rules`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateRule: (orgId: string, ruleId: string, data: any) =>
+      request<any>(`/orgs/${orgId}/alerting/rules/${ruleId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    deleteRule: (orgId: string, ruleId: string) =>
+      request<void>(`/orgs/${orgId}/alerting/rules/${ruleId}`, {
+        method: "DELETE",
+      }),
+    evaluate: (orgId: string) =>
+      request<{ evaluated: number; triggered: number }>(
+        `/orgs/${orgId}/alerting/evaluate`,
+        { method: "POST" }
+      ),
   },
   services: {
     list: (orgId: string) => request<any[]>(`/orgs/${orgId}/services`),
@@ -322,5 +388,27 @@ export const api = {
       request<void>(`/orgs/${orgId}/plugins/${pluginId}`, {
         method: "DELETE",
       }),
+  },
+  webhooks: {
+    list: (orgId: string) => request<any[]>(`/orgs/${orgId}/webhooks`),
+    create: (orgId: string, data: any) =>
+      request<any>(`/orgs/${orgId}/webhooks`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (orgId: string, webhookId: string, data: any) =>
+      request<any>(`/orgs/${orgId}/webhooks/${webhookId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    delete: (orgId: string, webhookId: string) =>
+      request<void>(`/orgs/${orgId}/webhooks/${webhookId}`, {
+        method: "DELETE",
+      }),
+    test: (orgId: string, webhookId: string) =>
+      request<any>(`/orgs/${orgId}/webhooks/${webhookId}/test`, {
+        method: "POST",
+      }),
+    events: () => request<string[]>("/webhooks/events"),
   },
 };

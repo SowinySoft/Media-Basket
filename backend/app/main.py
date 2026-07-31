@@ -1,3 +1,4 @@
+"""FastAPI application entry point."""
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -8,14 +9,22 @@ from app.core.metrics import (
     http_request_duration_seconds,
     metrics_endpoint,
 )
-from app.routes import auth, services, content, moderation, billing, health, oauth, websocket, youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter, facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat, bluesky, search, scheduler, templates, export, comments, activity, bulk, calendar, tasks, approval, audit, alerts, roi, suggestions, dashboards, webhooks_builder, ab_testing, competitors, org, members, plugins
+from app.routes import (
+    auth, services, content, moderation, billing, health, oauth, websocket,
+    youtube, reddit, whatsapp, whatsapp_webhook, telegram, instagram, twitter,
+    facebook, linkedin, tiktok, discord, slack, mastodon, pinterest, snapchat,
+    bluesky, search, scheduler, templates, export, comments, activity, bulk,
+    calendar, tasks, approval, audit, alerts, roi, suggestions, dashboards,
+    webhooks_builder, ab_testing, competitors, org, members, plugins,
+    inbox, data_retention, alerting, pgaudit,
+)
 from app.middleware.tenant import TenantMiddleware
+from app.middleware.csrf import CSRFMiddleware, SecurityHeadersMiddleware
 from app.core.rate_limiter import RateLimitMiddleware, rate_limiter
 import time
 
 settings = get_settings()
 
-# Setup structured logging
 setup_logging(log_level="DEBUG" if settings.DEBUG else "INFO")
 logger = get_logger("main")
 
@@ -49,6 +58,8 @@ except Exception as e:
 # --- Middleware (order matters: first added = outermost) ---
 app.add_middleware(RateLimitMiddleware, limiter=rate_limiter)
 app.add_middleware(TenantMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CSRFMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -58,7 +69,7 @@ app.add_middleware(
 )
 
 
-# --- Request metrics middleware ---
+# --- Request metrics + structlog middleware ---
 @app.middleware("http")
 async def metrics_middleware(request: Request, call_next):
     start = time.perf_counter()
@@ -66,7 +77,6 @@ async def metrics_middleware(request: Request, call_next):
     duration = time.perf_counter() - start
 
     path = request.url.path
-    # Normalize path params to avoid high-cardinality labels
     if "/orgs/" in path:
         parts = path.split("/")
         for i, part in enumerate(parts):
@@ -148,6 +158,10 @@ app.include_router(webhooks_builder.router, prefix="/api/v1/orgs/{org_id}/webhoo
 app.include_router(ab_testing.router, prefix="/api/v1/orgs/{org_id}/ab-tests", tags=["ab-tests"])
 app.include_router(competitors.router, prefix="/api/v1/orgs/{org_id}/competitors", tags=["competitors"])
 app.include_router(plugins.router, prefix="/api/v1/orgs/{org_id}/plugins", tags=["plugins"])
+app.include_router(inbox.router, prefix="/api/v1/orgs/{org_id}/notifications", tags=["inbox"])
+app.include_router(data_retention.router, prefix="/api/v1/orgs/{org_id}/retention", tags=["data-retention"])
+app.include_router(alerting.router, prefix="/api/v1/orgs/{org_id}/alerting", tags=["alerting"])
+app.include_router(pgaudit.router, prefix="/api/v1/orgs/{org_id}/audit", tags=["pgaudit"])
 
 
 @app.get("/")

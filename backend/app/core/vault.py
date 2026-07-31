@@ -24,22 +24,15 @@ logger = get_logger("vault")
 
 
 def _get_kek() -> bytes:
-    """Get the Key Encryption Key (KEK).
-
-    In production, this comes from AWS KMS or Vault Transit.
-    For self-hosted dev, derived from JWT_SECRET_KEY.
-    """
     raw = settings.JWT_SECRET_KEY.encode()
     return hashlib.sha256(raw).digest()
 
 
 def _generate_dek() -> bytes:
-    """Generate a random 256-bit Data Encryption Key."""
     return secrets.token_bytes(32)
 
 
 def _encrypt_dek(dek: bytes, kek: bytes) -> bytes:
-    """Encrypt a DEK with the KEK using AES-256-GCM. Returns nonce + ciphertext."""
     nonce = secrets.token_bytes(12)
     aesgcm = AESGCM(kek)
     ciphertext = aesgcm.encrypt(nonce, dek, None)
@@ -47,7 +40,6 @@ def _encrypt_dek(dek: bytes, kek: bytes) -> bytes:
 
 
 def _decrypt_dek(wrapped: bytes, kek: bytes) -> bytes:
-    """Decrypt a DEK that was encrypted with the KEK."""
     nonce = wrapped[:12]
     ciphertext = wrapped[12:]
     aesgcm = AESGCM(kek)
@@ -55,7 +47,6 @@ def _decrypt_dek(wrapped: bytes, kek: bytes) -> bytes:
 
 
 def _encrypt_payload(data: dict, dek: bytes) -> tuple[str, str]:
-    """Encrypt a dict payload using AES-256-GCM. Returns (ciphertext_b64, nonce_b64)."""
     plaintext = json.dumps(data).encode("utf-8")
     nonce = secrets.token_bytes(12)
     aesgcm = AESGCM(dek)
@@ -64,7 +55,6 @@ def _encrypt_payload(data: dict, dek: bytes) -> tuple[str, str]:
 
 
 def _decrypt_payload(ciphertext_b64: str, nonce_b64: str, dek: bytes) -> dict:
-    """Decrypt an encrypted payload using the given DEK."""
     ciphertext = b64decode(ciphertext_b64)
     nonce = b64decode(nonce_b64)
     aesgcm = AESGCM(dek)
@@ -72,13 +62,28 @@ def _decrypt_payload(ciphertext_b64: str, nonce_b64: str, dek: bytes) -> dict:
     return json.loads(plaintext.decode("utf-8"))
 
 
+async def _audit(db: AsyncSession, org_id: str, service_id: str, action: str, user_id: str | None = None):
+    """Write a vault_audit_log entry."""
+    from app.core.vault_audit import log_vault_access
+    try:
+        await log_vault_access(
+            db=db,
+            org_id=UUID(org_id),
+            user_id=UUID(user_id) if user_id else None,
+            service_id=UUID(service_id),
+            action=action,
+        )
+    except Exception as exc:
+        logger.warning("vault_audit_write_failed", error=str(exc))
+
+
 async def store_secret(
     db: AsyncSession,
     org_id: str | UUID,
     service_instance_id: str | UUID,
     data: dict,
+    user_id: str | UUID | None = None,
 ) -> str:
-    """Store a secret with envelope encryption in the DB. Returns vault entry ID."""
     from app.models.models import CredentialVault
 
     org_id = str(org_id)
@@ -88,7 +93,6 @@ async def store_secret(
     wrapped_dek = _encrypt_dek(dek, kek)
     ciphertext_b64, nonce_b64 = _encrypt_payload(data, dek)
 
-    # Check if entry already exists
     result = await db.execute(
         select(CredentialVault).where(
             CredentialVault.org_id == org_id,
@@ -106,6 +110,7 @@ async def store_secret(
         existing.algorithm = "AES-256-GCM"
         existing.rotated_at = datetime.now(timezone.utc)
         await db.flush()
+        await _audit(db, org_id, service_id, "rotate", user_id)
         logger.info("secret_rotated", org_id=org_id, service_id=service_id, new_version=old_version + 1)
         return str(existing.id)
     else:
@@ -120,6 +125,7 @@ async def store_secret(
         )
         db.add(entry)
         await db.flush()
+        await _audit(db, org_id, service_id, "write", user_id)
         logger.info("secret_stored", org_id=org_id, service_id=service_id)
         return str(entry.id)
 
@@ -128,8 +134,8 @@ async def read_secret(
     db: AsyncSession,
     org_id: str | UUID,
     service_instance_id: str | UUID,
+    user_id: str | UUID | None = None,
 ) -> dict | None:
-    """Read and decrypt a secret from the DB."""
     from app.models.models import CredentialVault
 
     result = await db.execute(
@@ -147,6 +153,7 @@ async def read_secret(
     dek = _decrypt_dek(wrapped_dek, kek)
     data = _decrypt_payload(entry.encrypted_data, entry.nonce, dek)
 
+    await _audit(db, str(org_id), str(service_instance_id), "read", user_id)
     logger.info("secret_read", org_id=str(org_id), service_id=str(service_instance_id), key_version=entry.key_version)
     return data
 
@@ -155,8 +162,8 @@ async def delete_secret(
     db: AsyncSession,
     org_id: str | UUID,
     service_instance_id: str | UUID,
+    user_id: str | UUID | None = None,
 ) -> bool:
-    """Delete a secret from the DB."""
     from app.models.models import CredentialVault
 
     result = await db.execute(
@@ -170,6 +177,7 @@ async def delete_secret(
         return False
 
     await db.delete(entry)
+    await _audit(db, str(org_id), str(service_instance_id), "revoke", user_id)
     logger.info("secret_deleted", org_id=str(org_id), service_id=str(service_instance_id))
     return True
 
@@ -179,8 +187,8 @@ async def rotate_secret(
     org_id: str | UUID,
     service_instance_id: str | UUID,
     new_data: dict,
+    user_id: str | UUID | None = None,
 ) -> str | None:
-    """Re-encrypt a secret with a new DEK (key rotation)."""
     from app.models.models import CredentialVault
 
     result = await db.execute(
@@ -206,6 +214,7 @@ async def rotate_secret(
     entry.rotated_at = datetime.now(timezone.utc)
     await db.flush()
 
+    await _audit(db, str(org_id), str(service_instance_id), "rotate", user_id)
     logger.info("secret_rotated", org_id=str(org_id), service_id=str(service_instance_id), old_version=old_version, new_version=old_version + 1)
     return str(entry.id)
 
@@ -215,7 +224,6 @@ async def get_vault_entry_info(
     org_id: str | UUID,
     service_instance_id: str | UUID,
 ) -> dict | None:
-    """Get vault entry metadata without decrypting the data."""
     from app.models.models import CredentialVault
 
     result = await db.execute(

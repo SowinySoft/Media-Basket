@@ -51,6 +51,47 @@ services_connected = Gauge(
     ["connector_type"],
 )
 
+# --- Credential Metrics ---
+credential_expiry_seconds = Gauge(
+    "credential_expiry_seconds",
+    "Seconds until credential expiry (per service)",
+    ["service_id", "connector_type"],
+)
+
+# --- Plugin Metrics ---
+plugin_load_total = Counter(
+    "plugin_load_total",
+    "Total plugin load attempts",
+    ["plugin_name", "status"],
+)
+
+# --- Rate Limiting Metrics ---
+rate_limit_remaining = Gauge(
+    "rate_limit_remaining",
+    "Remaining requests in current rate limit window",
+    ["client_id", "path"],
+)
+
+rate_limit_total = Counter(
+    "rate_limit_total",
+    "Total rate limit rejections",
+    ["client_id", "path"],
+)
+
+# --- Moderation Metrics ---
+moderation_actions_total = Counter(
+    "moderation_actions_total",
+    "Total moderation actions",
+    ["action", "connector_type"],
+)
+
+# --- Data Retention Metrics ---
+data_retention_deleted_total = Counter(
+    "data_retention_deleted_total",
+    "Total items deleted by data retention policy",
+    ["table_name"],
+)
+
 
 def metrics_endpoint() -> Response:
     """Return Prometheus metrics as a response."""

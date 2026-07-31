@@ -24,6 +24,7 @@ from app.models.models import (
     VaultAuditLog,
     SyncJob,
     Plugin,
+    Notification,
 )
 
 __all__ = [
@@ -52,4 +53,5 @@ __all__ = [
     "VaultAuditLog",
     "SyncJob",
     "Plugin",
+    "Notification",
 ]
