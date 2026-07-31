@@ -11,26 +11,27 @@ import hashlib
 import uuid
 import pytest
 from datetime import datetime, timezone
-from sqlalchemy import text
+from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from app.models.models import Base, User, Organization, Member, ServiceInstance, ContentItem, ContentMetadata, AuditLog, BillingPlan
 from app.core.security import hash_password
 
 
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/media_basket_test"
+DATABASE_URL = "postgresql+asyncpg://postgres@localhost:5433/media_basket_test"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def event_loop():
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 async def engine():
     engine = create_async_engine(DATABASE_URL, echo=False)
     async with engine.begin() as conn:
+        await conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'))
         await conn.run_sync(Base.metadata.create_all)
     yield engine
     async with engine.begin() as conn:
@@ -48,7 +49,7 @@ async def db(engine):
 
 # ── Helpers ─────────────────────────────────────────────────────────
 
-async def create_test_user(db: AsyncSession, email: str, name: str) -> tuple[User, Organization, Member]:
+async def create_test_user(db: AsyncSession, email: str, name: str) -> tuple[User, Organization, Member, ServiceInstance]:
     user = User(email=email, name=name, hashed_password=hash_password("testpass123"), auth_provider="email")
     db.add(user)
     await db.flush()
@@ -66,7 +67,16 @@ async def create_test_user(db: AsyncSession, email: str, name: str) -> tuple[Use
     db.add(billing)
     await db.flush()
 
-    return user, org, member
+    service = ServiceInstance(
+        org_id=org.id,
+        created_by=member.id,
+        connector_type="youtube",
+        display_name=f"{name}'s YouTube",
+    )
+    db.add(service)
+    await db.flush()
+
+    return user, org, member, service
 
 
 # ── Test 1: RLS Enforcement ────────────────────────────────────────
@@ -74,17 +84,18 @@ async def create_test_user(db: AsyncSession, email: str, name: str) -> tuple[Use
 @pytest.mark.asyncio
 async def test_rls_user_a_cannot_see_user_b_data(db: AsyncSession):
     """Verify row-level security: User A's data is invisible to User B."""
-    user_a, org_a, _ = await create_test_user(db, "usera@test.com", "User A")
-    user_b, org_b, _ = await create_test_user(db, "userb@test.com", "User B")
+    user_a, org_a, _, svc_a = await create_test_user(db, "usera@test.com", "User A")
+    user_b, org_b, _, svc_b = await create_test_user(db, "userb@test.com", "User B")
 
     # Create content for User A
     content = ContentItem(
         org_id=str(org_a.id),
-        service_instance_id=str(uuid.uuid4()),
+        service_instance_id=svc_a.id,
         external_id="video_a_001",
         content_type="video",
-        title="User A's Secret Video",
-        body="Only User A should see this",
+        category="videos",
+        payload={"title": "User A's Secret Video", "body": "Only User A should see this"},
+        content_hash="abc123",
     )
     db.add(content)
     await db.flush()
@@ -109,16 +120,17 @@ async def test_rls_user_a_cannot_see_user_b_data(db: AsyncSession):
 @pytest.mark.asyncio
 async def test_audit_log_created_on_content_mutation(db: AsyncSession):
     """Every content mutation should produce an audit_log entry."""
-    user, org, _ = await create_test_user(db, "audit@test.com", "Audit User")
+    user, org, member, svc = await create_test_user(db, "audit@test.com", "Audit User")
 
     # Create content
     content = ContentItem(
         org_id=str(org.id),
-        service_instance_id=str(uuid.uuid4()),
+        service_instance_id=svc.id,
         external_id="audit_test_001",
         content_type="post",
-        title="Audit Test Post",
-        body="Testing audit trail",
+        category="posts",
+        payload={"title": "Audit Test Post", "body": "Testing audit trail"},
+        content_hash="audit_hash_001",
     )
     db.add(content)
     await db.flush()
@@ -126,7 +138,7 @@ async def test_audit_log_created_on_content_mutation(db: AsyncSession):
     # Create audit log entry (simulating what the app does)
     audit = AuditLog(
         org_id=str(org.id),
-        user_id=str(user.id),
+        member_id=str(member.id),
         action="content.created",
         resource_type="content_item",
         resource_id=str(content.id),
@@ -152,7 +164,7 @@ async def test_audit_log_created_on_content_mutation(db: AsyncSession):
 @pytest.mark.asyncio
 async def test_content_dedup_same_video_twice(db: AsyncSession):
     """Syncing the same YouTube video twice should only produce one DB row."""
-    user, org, _ = await create_test_user(db, "dedup@test.com", "Dedup User")
+    user, org, _, svc = await create_test_user(db, "dedup@test.com", "Dedup User")
 
     external_id = "dQw4w9WgXcQ"  # YouTube video ID
     content_hash = hashlib.sha256(
@@ -162,10 +174,11 @@ async def test_content_dedup_same_video_twice(db: AsyncSession):
     # First sync
     item1 = ContentItem(
         org_id=str(org.id),
-        service_instance_id=str(uuid.uuid4()),
+        service_instance_id=svc.id,
         external_id=external_id,
         content_type="video",
-        title="Never Gonna Give You Up",
+        category="videos",
+        payload={"title": "Never Gonna Give You Up"},
         content_hash=content_hash,
     )
     db.add(item1)
@@ -174,10 +187,11 @@ async def test_content_dedup_same_video_twice(db: AsyncSession):
     # Second sync — same external_id + same org = same content_hash
     item2 = ContentItem(
         org_id=str(org.id),
-        service_instance_id=str(uuid.uuid4()),
+        service_instance_id=svc.id,
         external_id=external_id,
         content_type="video",
-        title="Never Gonna Give You Up",
+        category="videos",
+        payload={"title": "Never Gonna Give You Up"},
         content_hash=content_hash,
     )
     db.add(item2)
@@ -202,8 +216,8 @@ async def test_content_dedup_same_video_twice(db: AsyncSession):
 @pytest.mark.asyncio
 async def test_content_dedup_different_orgs_same_video(db: AsyncSession):
     """Same video synced by different orgs should NOT be deduped."""
-    user_a, org_a, _ = await create_test_user(db, "dedupa@test.com", "Dedup A")
-    user_b, org_b, _ = await create_test_user(db, "dedupb@test.com", "Dedup B")
+    user_a, org_a, _, svc_a = await create_test_user(db, "dedupa@test.com", "Dedup A")
+    user_b, org_b, _, svc_b = await create_test_user(db, "dedupb@test.com", "Dedup B")
 
     external_id = "same_video_123"
 
@@ -212,16 +226,20 @@ async def test_content_dedup_different_orgs_same_video(db: AsyncSession):
 
     item_a = ContentItem(
         org_id=str(org_a.id),
-        service_instance_id=str(uuid.uuid4()),
+        service_instance_id=svc_a.id,
         external_id=external_id,
         content_type="video",
+        category="videos",
+        payload={},
         content_hash=hash_a,
     )
     item_b = ContentItem(
         org_id=str(org_b.id),
-        service_instance_id=str(uuid.uuid4()),
+        service_instance_id=svc_b.id,
         external_id=external_id,
         content_type="video",
+        category="videos",
+        payload={},
         content_hash=hash_b,
     )
     db.add(item_a)

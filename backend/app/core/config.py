@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/media_basket"
-    DATABASE_URL_SYNC: str = "postgresql://postgres:postgres@localhost:5432/media_basket"
+    DATABASE_URL: str = "postgresql+asyncpg://postgres@localhost:5433/media_basket"
+    DATABASE_URL_SYNC: str = "postgresql://postgres@localhost:5433/media_basket"
 
     # Redis
     REDIS_URL: str | None = "redis://localhost:6379/0"

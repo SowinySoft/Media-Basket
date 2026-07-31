@@ -3,10 +3,33 @@ Pytest configuration and fixtures for MediaBasket backend tests.
 """
 import pytest
 import pytest_asyncio
+import asyncio
 from httpx import AsyncClient
 from unittest.mock import AsyncMock, MagicMock, patch
 from app.main import app
 from fastapi.testclient import TestClient
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Use a single event loop for the entire test session to avoid asyncpg cleanup issues."""
+    loop = asyncio.new_event_loop()
+    yield loop
+    # Cancel all pending tasks gracefully
+    pending = asyncio.all_tasks(loop)
+    for task in pending:
+        task.cancel()
+    loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+    loop.run_until_complete(loop.shutdown_asyncgens())
+    loop.close()
+
+
+@pytest.fixture(scope="session")
+async def engine_lifetime():
+    """Keep the database engine alive for the test session."""
+    from app.core.database import engine
+    yield
+    await engine.dispose()
 
 
 @pytest.fixture

@@ -7,6 +7,7 @@ Create Date: 2026-07-31
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+import uuid
 
 revision = "008_phase_g"
 down_revision = "007_phase_f"
@@ -33,24 +34,32 @@ def upgrade() -> None:
     )
 
     # Seed with all 15 built-in connectors
-    op.execute("""
-        INSERT INTO connector_types (name, display_name, tier, auth_type, capabilities) VALUES
-        ('youtube', 'YouTube', 'full', 'oauth2', '{"read":true,"write":true,"moderate":true,"analytics":true,"webhooks":true}'),
-        ('reddit', 'Reddit', 'full', 'oauth2', '{"read":true,"write":true,"moderate":true,"analytics":true,"webhooks":false}'),
-        ('whatsapp', 'WhatsApp', 'full', 'api_key', '{"read":true,"write":true,"moderate":true,"analytics":false,"webhooks":true}'),
-        ('telegram', 'Telegram', 'full', 'api_key', '{"read":true,"write":true,"moderate":true,"analytics":false,"webhooks":true}'),
-        ('instagram', 'Instagram', 'full', 'oauth2', '{"read":true,"write":true,"moderate":true,"analytics":true,"webhooks":false}'),
-        ('twitter', 'Twitter', 'full', 'oauth2', '{"read":true,"write":true,"moderate":true,"analytics":true,"webhooks":false}'),
-        ('facebook', 'Facebook', 'full', 'oauth2', '{"read":true,"write":true,"moderate":true,"analytics":true,"webhooks":true}'),
-        ('linkedin', 'LinkedIn', 'full', 'oauth2', '{"read":true,"write":true,"moderate":true,"analytics":true,"webhooks":false}'),
-        ('tiktok', 'TikTok', 'full', 'oauth2', '{"read":true,"write":true,"moderate":true,"analytics":true,"webhooks":false}'),
-        ('discord', 'Discord', 'full', 'api_key', '{"read":true,"write":true,"moderate":true,"analytics":false,"webhooks":true}'),
-        ('slack', 'Slack', 'full', 'oauth2', '{"read":true,"write":true,"moderate":true,"analytics":false,"webhooks":true}'),
-        ('mastodon', 'Mastodon', 'full', 'oauth2', '{"read":true,"write":true,"moderate":true,"analytics":false,"webhooks":true}'),
-        ('pinterest', 'Pinterest', 'full', 'oauth2', '{"read":true,"write":true,"moderate":false,"analytics":true,"webhooks":false}'),
-        ('snapchat', 'Snapchat', 'lightweight', 'oauth2', '{"read":true,"write":false,"moderate":false,"analytics":false,"webhooks":false}'),
-        ('bluesky', 'Bluesky', 'full', 'api_key', '{"read":true,"write":true,"moderate":true,"analytics":false,"webhooks":false}')
-    """)
+    connector_types_table = sa.table(
+        "connector_types",
+        sa.column("id", postgresql.UUID(as_uuid=True)),
+        sa.column("name", sa.String),
+        sa.column("display_name", sa.String),
+        sa.column("tier", sa.String),
+        sa.column("auth_type", sa.String),
+        sa.column("capabilities", postgresql.JSONB),
+    )
+    op.bulk_insert(connector_types_table, [
+        {"id": uuid.uuid4(), "name": "youtube", "display_name": "YouTube", "tier": "full", "auth_type": "oauth2", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": True, "webhooks": True}},
+        {"id": uuid.uuid4(), "name": "reddit", "display_name": "Reddit", "tier": "full", "auth_type": "oauth2", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": True, "webhooks": False}},
+        {"id": uuid.uuid4(), "name": "whatsapp", "display_name": "WhatsApp", "tier": "full", "auth_type": "api_key", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": False, "webhooks": True}},
+        {"id": uuid.uuid4(), "name": "telegram", "display_name": "Telegram", "tier": "full", "auth_type": "api_key", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": False, "webhooks": True}},
+        {"id": uuid.uuid4(), "name": "instagram", "display_name": "Instagram", "tier": "full", "auth_type": "oauth2", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": True, "webhooks": False}},
+        {"id": uuid.uuid4(), "name": "twitter", "display_name": "Twitter", "tier": "full", "auth_type": "oauth2", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": True, "webhooks": False}},
+        {"id": uuid.uuid4(), "name": "facebook", "display_name": "Facebook", "tier": "full", "auth_type": "oauth2", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": True, "webhooks": True}},
+        {"id": uuid.uuid4(), "name": "linkedin", "display_name": "LinkedIn", "tier": "full", "auth_type": "oauth2", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": True, "webhooks": False}},
+        {"id": uuid.uuid4(), "name": "tiktok", "display_name": "TikTok", "tier": "full", "auth_type": "oauth2", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": True, "webhooks": False}},
+        {"id": uuid.uuid4(), "name": "discord", "display_name": "Discord", "tier": "full", "auth_type": "api_key", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": False, "webhooks": True}},
+        {"id": uuid.uuid4(), "name": "slack", "display_name": "Slack", "tier": "full", "auth_type": "oauth2", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": False, "webhooks": True}},
+        {"id": uuid.uuid4(), "name": "mastodon", "display_name": "Mastodon", "tier": "full", "auth_type": "oauth2", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": False, "webhooks": True}},
+        {"id": uuid.uuid4(), "name": "pinterest", "display_name": "Pinterest", "tier": "full", "auth_type": "oauth2", "capabilities": {"read": True, "write": True, "moderate": False, "analytics": True, "webhooks": False}},
+        {"id": uuid.uuid4(), "name": "snapchat", "display_name": "Snapchat", "tier": "lightweight", "auth_type": "oauth2", "capabilities": {"read": True, "write": False, "moderate": False, "analytics": False, "webhooks": False}},
+        {"id": uuid.uuid4(), "name": "bluesky", "display_name": "Bluesky", "tier": "full", "auth_type": "api_key", "capabilities": {"read": True, "write": True, "moderate": True, "analytics": False, "webhooks": False}},
+    ])
 
 
 def downgrade() -> None:

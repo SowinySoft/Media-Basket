@@ -102,7 +102,7 @@ except Exception as e:
     tracer = None
 
 # --- Middleware (order matters: first added = outermost) ---
-app.add_middleware(RateLimitMiddleware, limiter=rate_limiter)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(TenantMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CSRFMiddleware)

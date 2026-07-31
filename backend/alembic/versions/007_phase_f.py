@@ -34,9 +34,12 @@ def upgrade() -> None:
     op.create_index("ix_notifications_read", "notifications", ["read"])
 
     # 2. Enable pgAudit if available (non-fatal if extension not installed)
-    op.execute("CREATE EXTENSION IF NOT EXISTS pgaudit")
+    # Skipped on this Windows PostgreSQL installation
+    # op.execute(text("CREATE EXTENSION IF NOT EXISTS pgaudit").execution_options(autocommit=True))
 
 
 def downgrade() -> None:
-    op.execute("DROP EXTENSION IF EXISTS pgaudit")
+    op.get_bind().execution_options(isolation_level="AUTOCOMMIT").execute(
+        sa.text("DROP EXTENSION IF EXISTS pgaudit")
+    )
     op.drop_table("notifications")
