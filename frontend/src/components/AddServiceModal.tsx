@@ -91,7 +91,7 @@ export default function AddServiceModal({ onClose, onSelect }: Props) {
               <X className="w-5 h-5 text-gray-400" />
             </button>
           </div>
-          <div className="p-4 space-y-2">
+          <div className="p-4 space-y-2 max-h-[60vh] overflow-y-auto">
             {connectors.map((c) => {
               const Icon = c.icon;
               return (
