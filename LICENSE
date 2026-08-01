@@ -1,0 +1,130 @@
+                    PROPRIETARY LICENSE
+                  Media Basket Platform
+              Copyright (c) 2024-2026 SowinySoft
+                    All Rights Reserved
+
+================================================================================
+
+PROJECT NAME:    Media Basket
+COPYRIGHT HOLDER: SowinySoft (Sowinyar)
+CONTACT:          https://github.com/SowinySoft | SowinySoft@gmail.com
+REPOSITORY:       https://github.com/SowinySoft/Media-Basket
+
+================================================================================
+
+DEFINITIONS:
+
+"Software"    - The Media Basket platform, including all source code, designs,
+                documentation, and associated files in this repository.
+
+"Author"      - SowinySoft (Sowinyar), the sole creator and copyright holder.
+
+"Licensee"    - Any person or entity granted explicit written permission by
+                the Author to use the Software.
+
+"Pull Request"- A code contribution proposal submitted through GitHub or
+                similar version control platforms.
+
+================================================================================
+
+GRANT OF RIGHTS:
+
+NO PERMISSION IS HEREBY GRANTED to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, or to permit
+persons to whom the Software is furnished to do so, WITHOUT THE EXPLICIT
+WRITTEN PERMISSION OF THE COPYRIGHT HOLDER (SowinySoft).
+
+================================================================================
+
+PULL REQUEST POLICY:
+
+All pull requests require EXPLICIT WRITTEN PERMISSION from the Author
+(SowinySoft) before submission. This includes but is not limited to:
+
+  1. Bug fixes
+  2. Feature additions
+  3. Documentation changes
+  4. Translation contributions
+  5. Code refactoring
+  6. Performance improvements
+
+To request permission for a pull request:
+  - Contact SowinySoft via GitHub: https://github.com/SowinySoft
+  - Or email: SowinySoft@gmail.com
+  - Wait for explicit written approval BEFORE creating the pull request
+
+Unauthorized pull requests will be closed without review.
+
+================================================================================
+
+PERMITTED USES (without prior permission):
+
+  - Viewing the source code for personal, non-commercial educational purposes
+  - Forking the repository for personal study (not for redistribution)
+  - Reporting issues and bugs via GitHub Issues
+  - Suggesting features via GitHub Discussions (subject to Author discretion)
+
+================================================================================
+
+PROHIBITED USES (without explicit written permission):
+
+  - Commercial use of any kind
+  - Redistribution in any form (modified or unmodified)
+  - Use in derivative works
+  - Inclusion in other software products
+  - Hosting as a service for third parties
+  - Selling or licensing to third parties
+  - Using the name, branding, or trademarks without consent
+
+================================================================================
+
+INTELLECTUAL PROPERTY:
+
+The following are the exclusive intellectual property of SowinySoft:
+
+  - Media Basket name, logo, and branding
+  - All code, algorithms, and implementations
+  - Documentation and architectural designs
+  - Database schemas and data models
+  - Workflow designs and methodologies
+  - API designs and endpoint specifications
+
+================================================================================
+
+WARRANTY DISCLAIMER:
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+================================================================================
+
+TERMINATION:
+
+This license and all permissions granted (if any) terminate automatically
+upon any breach of its terms. Upon termination, all copies and derivatives
+of the Software must be destroyed.
+
+================================================================================
+
+GOVERNING LAW:
+
+This license shall be governed by and construed in accordance with applicable
+international copyright law and treaties.
+
+================================================================================
+
+CONTACT FOR PERMISSION REQUESTS:
+
+  GitHub:  https://github.com/SowinySoft
+  Email:   SowinySoft@gmail.com
+
+Please include "Media Basket License Request" in the subject line.
+
+================================================================================
+
+                    COPYRIGHT (c) 2024-2026 SowinySoft
+                          ALL RIGHTS RESERVED
