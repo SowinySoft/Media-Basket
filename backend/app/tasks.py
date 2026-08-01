@@ -54,7 +54,7 @@ async def _sync_service(service_id: str, org_id: str):
         if not connector:
             return {"error": f"Unknown connector: {service.connector_type}"}
 
-        credentials = read_secret(org_id, service_id)
+        credentials = await read_secret(db, org_id, service_id)
         if not credentials:
             return {"error": "No credentials found"}
 
@@ -63,7 +63,7 @@ async def _sync_service(service_id: str, org_id: str):
                 new_tokens = await connector.refresh_token(credentials["refresh_token"])
                 if "access_token" in new_tokens:
                     credentials = {**credentials, **new_tokens}
-                    store_secret(org_id, service_id, credentials)
+                    await store_secret(db, org_id, service_id, credentials)
             except Exception:
                 pass
 

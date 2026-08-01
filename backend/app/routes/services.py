@@ -6,8 +6,7 @@ from app.core.database import get_db
 from app.models.models import ServiceInstance, Organization, Member, SyncJob
 from app.schemas.schemas import ServiceCreate, ServiceResponse
 from app.routes.auth import get_current_user
-from app.tasks import sync_service_safe
-from app.celery_app import celery_app
+from app.core.logging import get_logger
 from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
@@ -67,6 +66,16 @@ async def create_service(
     if current_user["role"] not in ("owner", "admin"):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
+    existing = await db.execute(
+        select(ServiceInstance).where(
+            ServiceInstance.org_id == org_id,
+            ServiceInstance.connector_type == data.connector_type,
+        )
+    )
+    existing_service = existing.scalar_one_or_none()
+    if existing_service:
+        return existing_service
+
     service = ServiceInstance(
         org_id=org_id,
         created_by=current_user["member_id"],
@@ -107,14 +116,39 @@ async def trigger_sync(
     )
     db.add(sync_job)
     await db.commit()
+    await db.refresh(sync_job)
 
-    sync_service_safe(str(service_id), str(org_id))
-    return {
-        "status": "sync_queued",
-        "service_id": str(service_id),
-        "sync_job_id": str(sync_job.id),
-        "celery_available": celery_app is not None,
-    }
+    # Run sync inline. Celery may not have a worker running in this
+    # environment (e.g. Railway), so we execute directly to guarantee
+    # content is ingested and the job reaches a terminal state.
+    from app.tasks import _sync_service
+    from datetime import datetime, timezone
+
+    sync_job.status = "running"
+    sync_job.started_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    try:
+        result = await _sync_service(str(service_id), str(org_id))
+        sync_job.status = "completed"
+        sync_job.result = result
+        sync_job.completed_at = datetime.now(timezone.utc)
+        if result.get("error"):
+            sync_job.status = "failed"
+            sync_job.error = result["error"]
+        await db.commit()
+        return {
+            "status": "synced" if not result.get("error") else "failed",
+            "service_id": str(service_id),
+            "sync_job_id": str(sync_job.id),
+            "result": result,
+        }
+    except Exception as e:
+        sync_job.status = "failed"
+        sync_job.error = str(e)
+        sync_job.completed_at = datetime.now(timezone.utc)
+        await db.commit()
+        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
 
 
 @router.get("/{service_id}/sync-jobs", response_model=list[SyncJobResponse])

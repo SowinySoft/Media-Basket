@@ -92,7 +92,7 @@ async def oauth_callback(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Token exchange failed: {str(e)}")
 
-    store_secret(db, org_id, service_id, token_data)
+    await store_secret(db, org_id, service_id, token_data)
 
     await db.commit()
 
