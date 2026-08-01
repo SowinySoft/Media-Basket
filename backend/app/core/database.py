@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+from fastapi import Request
 from app.core.config import get_settings
 from app.core.logging import get_logger
 
@@ -62,7 +63,7 @@ async def get_db_with_tenant(request=None) -> AsyncSession:
             await session.close()
 
 
-async def get_db_with_request(request, db=None) -> AsyncSession:
+async def get_db_with_request(request: Request, db=None) -> AsyncSession:
     """FastAPI dependency that provides a DB session with tenant context set.
 
     Usage:
