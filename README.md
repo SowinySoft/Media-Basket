@@ -369,19 +369,19 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    ITEM[New content item] --> ML[ML signals]
-    ML --> T{[toxicity > 0.7?]}
-    T -- yes --> FLAG[Flag + notify]
-    T -- no --> S{[spam_score > 0.8?]}
-    S -- yes --> QUAR[Quarantine]
-    S -- no --> APP[Auto-approve]
-    FLAG --> REVIEW[Human review queue]
+    ITEM["New content item"] --> ML["ML signals"]
+    ML --> T{"toxicity > 0.7?"}
+    T -- "yes" --> FLAG["Flag + notify"]
+    T -- "no" --> S{"spam_score > 0.8?"}
+    S -- "yes" --> QUAR["Quarantine"]
+    S -- "no" --> APP["Auto-approve"]
+    FLAG --> REVIEW["Human review queue"]
     QUAR --> REVIEW
-    REVIEW --> DECIDE{Decision}
-    DECIDE -- approve --> PUBLISH[Approve / publish]
-    DECIDE -- remove --> REMOVE[Remove / hide]
-    DECIDE -- reply --> REPLY[Draft reply]
-    PUBLISH --> LOG[Audit log]
+    REVIEW --> DECIDE{"Decision"}
+    DECIDE -- "approve" --> PUBLISH["Approve / publish"]
+    DECIDE -- "remove" --> REMOVE["Remove / hide"]
+    DECIDE -- "reply" --> REPLY["Draft reply"]
+    PUBLISH --> LOG["Audit log"]
     REMOVE --> LOG
     REPLY --> LOG
 ```
