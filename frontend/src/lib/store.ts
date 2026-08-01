@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
+  : "http://localhost:8000/api/v1";
 
 interface User {
   id: string;
@@ -229,7 +231,9 @@ export const useStore = create<TreeState>((set, get) => ({
   createService: async (connectorType, displayName) => {
     const token = localStorage.getItem("access_token");
     const orgId = get().org?.id;
-    if (!token || !orgId) return;
+    if (!token || !orgId) {
+      throw new Error("Not authenticated or no organization loaded");
+    }
 
     try {
       const res = await fetch(`${API_BASE}/orgs/${orgId}/services`, {
@@ -244,6 +248,7 @@ export const useStore = create<TreeState>((set, get) => ({
       await get().fetchServices();
     } catch (err: any) {
       set({ error: err.message });
+      throw err;
     }
   },
 
@@ -270,7 +275,7 @@ export const useStore = create<TreeState>((set, get) => ({
 
   connectService: async (serviceId, connectorType) => {
     const token = localStorage.getItem("access_token");
-    if (!token) return;
+    if (!token) throw new Error("Not authenticated");
 
     try {
       const res = await fetch(`${API_BASE}/services/auth/${connectorType}?service_id=${serviceId}`, {
@@ -280,9 +285,12 @@ export const useStore = create<TreeState>((set, get) => ({
       const data = await res.json();
       if (data.auth_url) {
         window.location.href = data.auth_url;
+      } else {
+        throw new Error("No auth URL returned");
       }
     } catch (err: any) {
       set({ error: err.message });
+      throw err;
     }
   },
 
