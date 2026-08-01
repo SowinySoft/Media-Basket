@@ -7,9 +7,9 @@ from app.models.models import VaultAuditLog
 async def log_vault_access(
     db: AsyncSession,
     org_id: UUID,
-    user_id: UUID | None = None,
     service_id: UUID,
     action: str,
+    user_id: UUID | None = None,
     ip_address: str | None = None,
     user_agent: str | None = None,
 ) -> VaultAuditLog:

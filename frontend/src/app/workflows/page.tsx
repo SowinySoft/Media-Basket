@@ -1,5 +1,6 @@
 "use client";
 
+import { decodeJwtPayload } from "../../lib/jwt";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -183,7 +184,7 @@ function getOrgId(): string | null {
   const token = localStorage.getItem("access_token");
   if (!token) return null;
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
+    const payload = decodeJwtPayload(token);
     return payload.org_id;
   } catch {
     return null;
@@ -1270,3 +1271,4 @@ export default function WorkflowsPage() {
     </main>
   );
 }
+

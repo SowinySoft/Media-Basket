@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { decodeJwtPayload } from "./jwt";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
@@ -157,13 +158,10 @@ export const useStore = create<TreeState>((set, get) => ({
       if (!res.ok) throw new Error("Failed to fetch user");
       const user = await res.json();
 
-      let payload: any;
+      let payload: any = {};
       try {
-        payload = JSON.parse(atob(token.split(".")[1]));
-      } catch {
-        get().logout();
-        return;
-      }
+        payload = decodeJwtPayload(token);
+      } catch {}
 
       // Fetch real org data
       try {
@@ -374,3 +372,5 @@ export const useStore = create<TreeState>((set, get) => ({
     }
   },
 }));
+
+

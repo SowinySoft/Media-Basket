@@ -1,5 +1,6 @@
 "use client";
 
+import { decodeJwtPayload } from "../../../../lib/jwt";
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -25,7 +26,7 @@ export default function ServiceAnalyticsPage({ params }: { params: Promise<{ id:
     if (!token) { router.push("/login"); return; }
     let orgId: string;
     try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
+      const payload = decodeJwtPayload(token);
       orgId = payload.org_id;
     } catch {
       router.push("/login");

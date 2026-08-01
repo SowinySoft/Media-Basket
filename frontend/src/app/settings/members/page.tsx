@@ -1,5 +1,6 @@
 "use client";
 
+import { decodeJwtPayload } from "../../../lib/jwt";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -39,7 +40,7 @@ export default function MembersPage() {
     const token = localStorage.getItem("access_token");
     if (!token) { router.push("/login"); return; }
     try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
+      const payload = decodeJwtPayload(token);
       setCurrentUserRole(payload.role);
     } catch {
       router.push("/login");
@@ -53,7 +54,7 @@ export default function MembersPage() {
     if (!token) { router.push("/login"); return; }
     let orgId: string;
     try {
-      orgId = JSON.parse(atob(token.split(".")[1])).org_id;
+      orgId = decodeJwtPayload(token).org_id;
     } catch {
       router.push("/login");
       return;
@@ -74,7 +75,7 @@ export default function MembersPage() {
     if (!token) { router.push("/login"); setInviting(false); return; }
     let orgId: string;
     try {
-      orgId = JSON.parse(atob(token.split(".")[1])).org_id;
+      orgId = decodeJwtPayload(token).org_id;
     } catch {
       router.push("/login");
       setInviting(false);
@@ -108,7 +109,7 @@ export default function MembersPage() {
     if (!token) { router.push("/login"); return; }
     let orgId: string;
     try {
-      orgId = JSON.parse(atob(token.split(".")[1])).org_id;
+      orgId = decodeJwtPayload(token).org_id;
     } catch {
       router.push("/login");
       return;
@@ -132,7 +133,7 @@ export default function MembersPage() {
     if (!token) { router.push("/login"); return; }
     let orgId: string;
     try {
-      orgId = JSON.parse(atob(token.split(".")[1])).org_id;
+      orgId = decodeJwtPayload(token).org_id;
     } catch {
       router.push("/login");
       return;
