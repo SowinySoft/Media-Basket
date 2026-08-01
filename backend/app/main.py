@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from sqlalchemy import text
 from app.core.config import get_settings
 from app.core.logging import setup_logging, get_logger
 from app.core.metrics import (
@@ -45,6 +46,11 @@ async def lifespan(app: FastAPI):
     logger.info("creating_tables")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(
+            text(
+                "ALTER TABLE vault_audit_log ALTER COLUMN user_id DROP NOT NULL"
+            )
+        )
     logger.info("tables_ready")
     yield
     logger.info("shutting_down")

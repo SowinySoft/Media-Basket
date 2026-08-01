@@ -63,16 +63,17 @@ def _decrypt_payload(ciphertext_b64: str, nonce_b64: str, dek: bytes) -> dict:
 
 
 async def _audit(db: AsyncSession, org_id: str, service_id: str, action: str, user_id: str | None = None):
-    """Write a vault_audit_log entry."""
+    """Write a vault_audit_log entry. Runs in a savepoint so failures never poison the caller's transaction."""
     from app.core.vault_audit import log_vault_access
     try:
-        await log_vault_access(
-            db=db,
-            org_id=UUID(org_id),
-            user_id=UUID(user_id) if user_id else None,
-            service_id=UUID(service_id),
-            action=action,
-        )
+        async with db.begin_nested():
+            await log_vault_access(
+                db=db,
+                org_id=UUID(org_id),
+                user_id=UUID(user_id) if user_id else None,
+                service_id=UUID(service_id),
+                action=action,
+            )
     except Exception as exc:
         logger.warning("vault_audit_write_failed", error=str(exc))
 
