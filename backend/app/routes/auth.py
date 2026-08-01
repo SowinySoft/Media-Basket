@@ -96,7 +96,14 @@ async def signup(data: UserCreate, response: Response, db: AsyncSession = Depend
     db.add(member)
     await db.flush()
 
-    billing = BillingPlan(org_id=org.id, plan="free", max_services=3, max_members=5)
+    from datetime import datetime, timedelta, timezone
+    billing = BillingPlan(
+        org_id=org.id,
+        plan="free",
+        max_services=3,
+        max_members=5,
+        current_period_end=datetime.now(timezone.utc) + timedelta(days=90),
+    )
     db.add(billing)
 
     token_data = {
