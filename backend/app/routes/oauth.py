@@ -96,7 +96,8 @@ async def oauth_callback(
 
     await db.commit()
 
-    return RedirectResponse(url=f"http://localhost:3000/tree?connected={connector_type}")
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
+    return RedirectResponse(url=f"{frontend_url}/tree?connected={connector_type}")
 
 
 @router.post("/refresh/{connector_type}/{service_id}")
