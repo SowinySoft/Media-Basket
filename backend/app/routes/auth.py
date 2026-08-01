@@ -97,12 +97,13 @@ async def signup(data: UserCreate, response: Response, db: AsyncSession = Depend
     await db.flush()
 
     from datetime import datetime, timedelta, timezone
+    signup_date = user.created_at or datetime.now(timezone.utc)
     billing = BillingPlan(
         org_id=org.id,
         plan="free",
         max_services=3,
         max_members=5,
-        current_period_end=datetime.now(timezone.utc) + timedelta(days=90),
+        current_period_end=signup_date + timedelta(days=90),
     )
     db.add(billing)
 
