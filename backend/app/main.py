@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
             message="CHANGE JWT_SECRET_KEY and VAULT_TOKEN before production!",
         )
     from app.core.database import engine, Base
-    from app.models import *
+    from app.models import models, connector_type
     logger.info("creating_tables")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
