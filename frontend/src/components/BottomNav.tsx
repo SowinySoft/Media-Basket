@@ -23,8 +23,8 @@ export default function BottomNav({ unreadCount = 0 }: Props) {
       <div className="flex items-center justify-around">
         {tabs.map(({ label, icon: Icon, href }) => {
           const isActive =
-            href === "/profile"
-              ? pathname === href
+            href === "/tree"
+              ? pathname === href || pathname.startsWith(href)
               : pathname.startsWith(href);
 
           return (

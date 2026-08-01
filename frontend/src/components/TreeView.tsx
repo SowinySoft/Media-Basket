@@ -163,7 +163,7 @@ export default function TreeView() {
   const handleContextAction = useCallback((action: string, node: any) => {
     switch (action) {
       case "sync":
-        syncService(node.id, node.connectorType);
+        syncService(node.id);
         break;
       case "view_content":
         setSelectedService(node.id);
@@ -196,7 +196,7 @@ export default function TreeView() {
         (c) => c.service_instance_id === service.id
       );
 
-      const flaggedCount = serviceContent.filter((c) => c.flagged).length;
+      const flaggedCount = serviceContent.filter((c) => c.metadata?.flagged).length;
       const contentByType: Record<string, TreeNode[]> = {};
       serviceContent.forEach((item) => {
         const type = item.content_type;
@@ -209,8 +209,8 @@ export default function TreeView() {
           type: "content",
           contentType: item.content_type,
           data: item,
-          badge: item.flagged ? 1 : 0,
-          badgeType: item.flagged ? "flagged" : undefined,
+          badge: item.metadata?.flagged ? 1 : 0,
+          badgeType: item.metadata?.flagged ? "flagged" : undefined,
         });
       });
 
