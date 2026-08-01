@@ -7,7 +7,8 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Media Basket",
-  description: "All your media accounts in one basket",
+  description:
+    "Media Basket is a social media management platform that connects your YouTube, Reddit, WhatsApp, and other media accounts in one place. Sync content, moderate conversations, and manage all your channels from a single dashboard.",
 };
 
 export default function RootLayout({
