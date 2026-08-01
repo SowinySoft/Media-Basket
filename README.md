@@ -219,59 +219,63 @@ The platform is **SaaS-ready from day one**: organizations, roles (Owner / Admin
 
 ```mermaid
 flowchart TB
-    subgraph Clients
-        UI[Next.js Frontend<br/>Port 3000]
+    subgraph CLIENTS["Clients"]
+        UI["Next.js Frontend (Port 3000)"]
     end
 
-    subgraph Edge
-        NODE[JWT Auth]
-        MID[Tenant Middleware<br/>RLS Scoping]
-        RL[Rate Limiter]
-        SEC[CSRF + Security Headers]
+    subgraph EDGE["Edge Layer"]
+        NODE["JWT Auth"]
+        MID["Tenant Middleware - RLS Scoping"]
+        RL["Rate Limiter"]
+        SEC["CSRF + Security Headers"]
     end
 
-    subgraph API[FastAPI Backend - Port 8000]
-        R[Alembic Migrations]
-        API_R[API Routes]
-        WS[WebSocket Hub]
-        WF[Workflow Engine]
-        ML[ML Pipeline]
+    subgraph API["FastAPI Backend (Port 8000)"]
+        MIG["Alembic Migrations"]
+        ROUTES["API Routes"]
+        WS["WebSocket Hub"]
+        WF["Workflow Engine"]
+        ML["ML Pipeline"]
     end
 
-    subgraph Workers[Background Workers]
-        CELERY[Celery Beat Scheduler]
-        POLL[Connector Pollers]
-        DLQ[Dead Letter Queue]
+    subgraph WORKERS["Background Workers"]
+        CELERY["Celery Beat Scheduler"]
+        POLL["Connector Pollers"]
+        DLQ["Dead Letter Queue"]
     end
 
-    subgraph Data
-        PG[(PostgreSQL 16)]
-        REDIS[(Redis 7)]
-        VAULT[Vault - Secrets]
-        MINIO[(MinIO - S3 Storage)]
+    subgraph DATA["Data Layer"]
+        PG[("PostgreSQL 16")]
+        REDIS[("Redis 7")]
+        VAULT["Vault - Secrets"]
+        MINIO[("MinIO - S3 Storage")]
     end
 
-    subgraph Observability
-        PROM[Prometheus]
-        TRACE[OpenTelemetry]
-        LOGS[Structlog]
+    subgraph OBS["Observability"]
+        PROM["Prometheus"]
+        TRACE["OpenTelemetry"]
+        LOGS["Structlog"]
     end
 
-    UI --> NODE --> MID --> RL --> SEC --> API_R
-    API_R --> PG
-    API_R --> REDIS
-    API_R --> WS
-    API_R --> WF
-    API_R --> VAULT
-    API_R --> MINIO
+    UI --> NODE
+    NODE --> MID
+    MID --> RL
+    RL --> SEC
+    SEC --> ROUTES
+    ROUTES --> PG
+    ROUTES --> REDIS
+    ROUTES --> WS
+    ROUTES --> WF
+    ROUTES --> VAULT
+    ROUTES --> MINIO
     WF --> CELERY
     CELERY --> POLL
     POLL --> REDIS
-    API_R --> ML
+    ROUTES --> ML
     ML --> PG
-    API_R --> PROM
-    API_R --> TRACE
-    API_R --> LOGS
+    ROUTES --> PROM
+    ROUTES --> TRACE
+    ROUTES --> LOGS
     DLQ --> CELERY
 ```
 
@@ -454,20 +458,20 @@ stateDiagram-v2
 
 ```mermaid
 flowchart LR
-    subgraph Host
-        subgraph Network[media_basket_network]
-            PG[(postgres:16-alpine)]
-            RD[(redis:7-alpine)]
-            MIG[migrate - init_db.sh]
-            BE[backend - uvicorn]
-            FE[frontend - next]
+    subgraph HOST["Host"]
+        subgraph NETWORK["media_basket_network"]
+            PG[("postgres:16-alpine")]
+            RD[("redis:7-alpine")]
+            MIG["migrate - init_db.sh"]
+            BE["backend - uvicorn"]
+            FE["frontend - next"]
         end
     end
     FE -->|"NEXT_PUBLIC_API_URL"| BE
-    BE -->|asyncpg| PG
-    BE -->|redis| RD
-    BE -->|healthcheck| PG
-    BE -->|healthcheck| RD
+    BE -->|"asyncpg"| PG
+    BE -->|"redis"| RD
+    BE -->|"healthcheck"| PG
+    BE -->|"healthcheck"| RD
     MIG -->|"depends_on healthy"| PG
     FE -->|"depends_on healthy"| BE
 ```
@@ -476,18 +480,18 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    subgraph Cluster
-        subgraph ns[media-basket namespace]
-            ING[Ingress]
-            FE_D[frontend deployment]
-            BE_D[backend deployment]
-            SVC[services]
-            HPA[HorizontalPodAutoscaler]
-            CM[ConfigMap + Secrets]
+    subgraph CLUSTER["Cluster"]
+        subgraph NS["media-basket namespace"]
+            ING["Ingress"]
+            FE_D["frontend deployment"]
+            BE_D["backend deployment"]
+            SVC["services"]
+            HPA["HorizontalPodAutoscaler"]
+            CM["ConfigMap + Secrets"]
         end
-        subgraph data[Managed / external]
-            PG_K[(PostgreSQL)]
-            RD_K[(Redis)]
+        subgraph DATAK["Managed / external"]
+            PG_K[("PostgreSQL")]
+            RD_K[("Redis")]
         end
     end
     ING --> FE_D
@@ -1370,22 +1374,22 @@ npm run test:e2e:report   # open HTML report
 
 ```mermaid
 flowchart TB
-    subgraph E2E[Playwright - few]
-        E2E1[Signup → connect → moderate]
-        E2E2[Workflow run end-to-end]
+    subgraph E2E_SUB["E2E - Playwright (few)"]
+        E2E1["Signup → connect → moderate"]
+        E2E2["Workflow run end-to-end"]
     end
-    subgraph API[Backend integration - many]
-        API1[pytest + Postgres]
-        API2[RLS isolation tests]
-        API3[RBAC matrix tests]
+    subgraph API_SUB["Backend integration (many)"]
+        API1["pytest + Postgres"]
+        API2["RLS isolation tests"]
+        API3["RBAC matrix tests"]
     end
-    subgraph UNIT[Unit - most]
-        UNIT1[Connector parsing]
-        UNIT2[ML score computation]
-        UNIT3[Schema validation]
+    subgraph UNIT_SUB["Unit (most)"]
+        UNIT1["Connector parsing"]
+        UNIT2["ML score computation"]
+        UNIT3["Schema validation"]
     end
-    UNIT --> API
-    API --> E2E
+    UNIT_SUB --> API_SUB
+    API_SUB --> E2E_SUB
 ```
 
 ---
