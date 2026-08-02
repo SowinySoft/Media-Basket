@@ -61,8 +61,8 @@ export default function Home() {
               Connect Accounts
             </h2>
             <p className="text-gray-400 text-sm">
-              Link YouTube, Reddit, WhatsApp, and other social media accounts
-              securely with OAuth.
+              Link YouTube, Facebook, Instagram, TikTok, WhatsApp, Reddit, and
+              other social media accounts securely with OAuth.
             </p>
           </div>
           <div className="bg-gray-800 rounded-xl p-6 text-center">
@@ -71,7 +71,7 @@ export default function Home() {
             </h2>
             <p className="text-gray-400 text-sm">
               Automatically sync content, comments, and conversations from all
-              your channels.
+              your channels into one unified content tree.
             </p>
           </div>
           <div className="bg-gray-800 rounded-xl p-6 text-center">
@@ -79,12 +79,59 @@ export default function Home() {
               Moderate & Manage
             </h2>
             <p className="text-gray-400 text-sm">
-              Moderate conversations and manage your media from a single unified
-              dashboard.
+              Moderate conversations, reply to comments, and manage your media
+              from a single unified dashboard.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="bg-gray-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-2">Unified Inbox</h2>
+            <p className="text-gray-400 text-sm">
+              Every comment and message from every connected platform lands in
+              one inbox, so nothing slips through.
+            </p>
+          </div>
+          <div className="bg-gray-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-2">Team Collaboration</h2>
+            <p className="text-gray-400 text-sm">
+              Invite team members, assign tasks, set up approval workflows, and
+              moderate together with full audit logs.
+            </p>
+          </div>
+          <div className="bg-gray-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-2">Analytics & Insights</h2>
+            <p className="text-gray-400 text-sm">
+              Track engagement, sentiment, and performance across all channels
+              with built-in analytics and ROI tracking.
+            </p>
+          </div>
+          <div className="bg-gray-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-2">Enterprise-Grade Security</h2>
+            <p className="text-gray-400 text-sm">
+              OAuth-based connections, encrypted credential vault, and granular
+              role-based access control protect your accounts.
             </p>
           </div>
         </div>
       </div>
+
+      <footer className="border-t border-gray-800">
+        <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-gray-500">
+            © 2026 Media Basket. All rights reserved.
+          </p>
+          <nav className="flex gap-6">
+            <a href="/privacy" className="text-sm text-gray-400 hover:text-white underline">
+              Privacy Policy
+            </a>
+            <a href="/terms" className="text-sm text-gray-400 hover:text-white underline">
+              Terms of Service
+            </a>
+          </nav>
+        </div>
+      </footer>
     </main>
   );
 }
