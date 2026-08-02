@@ -70,29 +70,90 @@ async def _sync_service(service_id: str, org_id: str):
         access_token = credentials.get("access_token")
         items_fetched = 0
 
+        async def _store(item: dict) -> int:
+            nonlocal items_fetched
+            content_hash = compute_hash(item["payload"])
+            existing = await db.execute(
+                select(ContentItem).where(ContentItem.content_hash == content_hash)
+            )
+            if existing.scalar_one_or_none():
+                return 0
+            content = ContentItem(
+                org_id=org_id,
+                service_instance_id=service_id,
+                external_id=item["external_id"],
+                content_type=item["content_type"],
+                category=item["category"],
+                payload=item["payload"],
+                content_hash=content_hash,
+            )
+            db.add(content)
+            items_fetched += 1
+            return 1
+
         if service.connector_type == "youtube":
             channel_items = await connector.fetch({"access_token": access_token, "type": "channel"})
             channel_id = channel_items[0]["external_id"] if channel_items else None
             if channel_id:
                 items = await connector.fetch({"access_token": access_token, "type": "videos", "channel_id": channel_id})
                 for item in items:
-                    content_hash = compute_hash(item["payload"])
-                    existing = await db.execute(
-                        select(ContentItem).where(ContentItem.content_hash == content_hash)
-                    )
-                    if existing.scalar_one_or_none():
-                        continue
-                    content = ContentItem(
-                        org_id=org_id,
-                        service_instance_id=service_id,
-                        external_id=item["external_id"],
-                        content_type=item["content_type"],
-                        category=item["category"],
-                        payload=item["payload"],
-                        content_hash=content_hash,
-                    )
-                    db.add(content)
-                    items_fetched += 1
+                    await _store(item)
+
+        elif service.connector_type == "facebook":
+            page_items = await connector.fetch({"access_token": access_token, "type": "pages"})
+            page_ids = []
+            for page in page_items:
+                await _store(page)
+                page_ids.append(page["external_id"])
+                page_token = page.get("payload", {}).get("access_token") or access_token
+                posts = await connector.fetch({
+                    "access_token": access_token,
+                    "type": "posts",
+                    "page_id": page["external_id"],
+                    "page_token": page_token,
+                })
+                for post in posts:
+                    await _store(post)
+                    comments = await connector.fetch({
+                        "access_token": access_token,
+                        "type": "comments",
+                        "post_id": post["external_id"],
+                    })
+                    for comment in comments:
+                        await _store(comment)
+
+        elif service.connector_type == "instagram":
+            profile_items = await connector.fetch({"access_token": access_token, "type": "me"})
+            for profile in profile_items:
+                await _store(profile)
+            ig_user_id = profile_items[0]["external_id"] if profile_items else None
+            if ig_user_id:
+                posts = await connector.fetch({"access_token": access_token, "type": "posts", "ig_user_id": ig_user_id})
+                for post in posts:
+                    await _store(post)
+                    comments = await connector.fetch({
+                        "access_token": access_token,
+                        "type": "comments",
+                        "media_id": post["external_id"],
+                    })
+                    for comment in comments:
+                        await _store(comment)
+
+        elif service.connector_type == "tiktok":
+            profile_items = await connector.fetch({"access_token": access_token, "type": "me"})
+            for profile in profile_items:
+                await _store(profile)
+            videos = await connector.fetch({"access_token": access_token, "type": "videos"})
+            for video in videos:
+                await _store(video)
+                comments = await connector.fetch({
+                    "access_token": access_token,
+                    "type": "comments",
+                    "video_id": video["external_id"],
+                })
+                for comment in comments:
+                    await _store(comment)
+
         else:
             fetch_types = {
                 "reddit": ["posts", "comments"],
@@ -101,23 +162,7 @@ async def _sync_service(service_id: str, org_id: str):
             for fetch_type in fetch_types.get(service.connector_type, []):
                 items = await connector.fetch({"access_token": access_token, "type": fetch_type})
                 for item in items:
-                    content_hash = compute_hash(item["payload"])
-                    existing = await db.execute(
-                        select(ContentItem).where(ContentItem.content_hash == content_hash)
-                    )
-                    if existing.scalar_one_or_none():
-                        continue
-                    content = ContentItem(
-                        org_id=org_id,
-                        service_instance_id=service_id,
-                        external_id=item["external_id"],
-                        content_type=item["content_type"],
-                        category=item["category"],
-                        payload=item["payload"],
-                        content_hash=content_hash,
-                    )
-                    db.add(content)
-                    items_fetched += 1
+                    await _store(item)
 
         from datetime import datetime, timezone
         service.last_synced_at = datetime.now(timezone.utc)

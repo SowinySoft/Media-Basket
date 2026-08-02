@@ -244,7 +244,7 @@ export default function AddServiceModal({ onClose, onSelect }: Props) {
 }
 
 function isOAuthConnector(type: string): boolean {
-  return ["youtube", "reddit", "instagram", "twitter"].includes(type);
+  return ["youtube", "reddit", "instagram", "twitter", "facebook", "tiktok"].includes(type);
 }
 
 function getDisplayName(type: string, data: Record<string, string>): string {
@@ -261,6 +261,10 @@ function getDisplayName(type: string, data: Record<string, string>): string {
       return "Instagram Account";
     case "twitter":
       return "Twitter/X Account";
+    case "facebook":
+      return "Facebook Page";
+    case "tiktok":
+      return "TikTok Account";
     default:
       return type;
   }
